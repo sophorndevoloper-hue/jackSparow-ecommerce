@@ -45,6 +45,7 @@
         <form action="{{ route('admin.products.update', $product->id) }}" method="POST" enctype="multipart/form-data" class="mt-3" id="productEditForm">
             @csrf
             @method('PUT')
+            <input type="hidden" name="allow_stock_mismatch" id="allowStockMismatch" value="0">
 
             <!-- Nav Tabs -->
             <ul class="nav nav-tabs mb-4" id="productEditTabs" role="tablist">
@@ -497,8 +498,14 @@
                                 <h5 class="mb-3"><i class="bi bi-building text-primary me-2"></i>Stock Quantities</h5>
                                 <div class="row g-3">
                                     <div class="col-md-6">
-                                        <label class="form-label fw-bold small" for="stock_quantity">Total Stock Quantity *</label>
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <label class="form-label fw-bold small mb-0" for="stock_quantity">Total Stock Quantity *</label>
+                                            <button type="button" id="btnSyncStockToSerials" class="btn btn-link btn-sm p-0 text-decoration-none font-monospace small d-none" onclick="syncStockQtyToSerials()">
+                                                <i class="bi bi-arrow-repeat me-1"></i>Match Serials (<span class="sync-serials-target">0</span>)
+                                            </button>
+                                        </div>
                                         <input type="number" name="stock_quantity" id="stock_quantity" value="{{ old('stock_quantity', $product->stock_quantity) }}" required class="form-control" min="0">
+                                        <div id="stockQtyMismatchFeedback" class="small mt-1 d-none"></div>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold small" for="low_stock_threshold">Low Stock Alert Limit *</label>
@@ -818,16 +825,11 @@ SN-AMD-90003">{{ old('serials_text') }}</textarea>
                             if (badge1) badge1.textContent = data.total_count;
                             if (badge2) badge2.textContent = data.total_count;
 
-                            // Automatically update stock_quantity input and clear any mismatch alert
+                            // Automatically update stock_quantity input and sync check
                             const stockInput = document.getElementById('stock_quantity');
                             if (stockInput) {
                                 stockInput.value = data.total_count;
-                                stockInput.classList.remove('is-invalid');
-                            }
-                            const mismatchAlert = document.getElementById('stockMismatchAlertContainer');
-                            if (mismatchAlert) {
-                                mismatchAlert.classList.add('d-none');
-                                mismatchAlert.innerHTML = '';
+                                checkStockQuantityMatch();
                             }
                         }
 
@@ -854,6 +856,7 @@ SN-AMD-90003">{{ old('serials_text') }}</textarea>
                 });
             }
 
+            // Stock Quantity vs Serial Number Matching
             function getTrackedSerialsCount() {
                 const el = document.getElementById('trackedSerialsCount');
                 if (!el) return 0;
@@ -861,20 +864,97 @@ SN-AMD-90003">{{ old('serials_text') }}</textarea>
                 return isNaN(count) ? 0 : count;
             }
 
-            // Product edit form submission: single alert message on stock vs serial mismatch
+            function checkStockQuantityMatch() {
+                const stockInput = document.getElementById('stock_quantity');
+                const feedback = document.getElementById('stockQtyMismatchFeedback');
+                const syncBtn = document.getElementById('btnSyncStockToSerials');
+                const trackingCheckbox = document.getElementById('requiresSerialTracking');
+                if (!stockInput || !feedback) return { matched: true, type: 'exact' };
+
+                const serialCount = getTrackedSerialsCount();
+                const isTracked = (trackingCheckbox && trackingCheckbox.checked) || serialCount > 0;
+                const stockVal = stockInput.value.trim();
+                const stockQty = parseInt(stockVal, 10);
+
+                // Update sync button labels
+                document.querySelectorAll('.sync-serials-target').forEach(el => el.textContent = serialCount);
+
+                if (!isTracked && serialCount === 0) {
+                    feedback.classList.add('d-none');
+                    stockInput.classList.remove('is-invalid', 'is-valid');
+                    if (syncBtn) syncBtn.classList.add('d-none');
+                    return { matched: true, type: 'untracked' };
+                }
+
+                if (stockVal === '' || isNaN(stockQty)) {
+                    stockInput.classList.add('is-invalid');
+                    stockInput.classList.remove('is-valid');
+                    feedback.className = 'small mt-1 text-danger fw-semibold d-block';
+                    feedback.innerHTML = '<i class="bi bi-exclamation-circle-fill me-1"></i> Total stock quantity is required.';
+                    if (syncBtn && serialCount > 0) syncBtn.classList.remove('d-none');
+                    return { matched: false, type: 'empty', stockQty: 0, serialCount: serialCount };
+                }
+
+                if (serialCount > 0 && stockQty > serialCount) {
+                    stockInput.classList.add('is-invalid');
+                    stockInput.classList.remove('is-valid');
+                    if (syncBtn) syncBtn.classList.remove('d-none');
+                    feedback.className = 'small mt-1 text-warning-emphasis fw-semibold d-block';
+                    feedback.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-warning me-1"></i> Total stock quantity (${stockQty}) is more than tracked serial numbers (${serialCount}).`;
+                    return { matched: false, type: 'more', stockQty: stockQty, serialCount: serialCount };
+                } else if (serialCount > 0 && stockQty < serialCount) {
+                    stockInput.classList.add('is-invalid');
+                    stockInput.classList.remove('is-valid');
+                    if (syncBtn) syncBtn.classList.remove('d-none');
+                    feedback.className = 'small mt-1 text-danger fw-semibold d-block';
+                    feedback.innerHTML = `<i class="bi bi-exclamation-circle-fill text-danger me-1"></i> Total stock quantity (${stockQty}) is less than tracked serial numbers (${serialCount}).`;
+                    return { matched: false, type: 'less', stockQty: stockQty, serialCount: serialCount };
+                } else {
+                    stockInput.classList.remove('is-invalid');
+                    stockInput.classList.add('is-valid');
+                    if (syncBtn) syncBtn.classList.add('d-none');
+                    feedback.className = 'small mt-1 text-success fw-semibold d-block';
+                    feedback.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i> Total stock quantity matches tracked serial numbers (${serialCount}).`;
+                    return { matched: true, type: 'exact', stockQty: stockQty, serialCount: serialCount };
+                }
+            }
+
+            window.syncStockQtyToSerials = function() {
+                const count = getTrackedSerialsCount();
+                const stockInput = document.getElementById('stock_quantity');
+                if (stockInput) {
+                    stockInput.value = count;
+                    checkStockQuantityMatch();
+                    const alertContainer = document.getElementById('stockMismatchAlertContainer');
+                    if (alertContainer) alertContainer.classList.add('d-none');
+                }
+            };
+
+            const stockQuantityInput = document.getElementById('stock_quantity');
+            if (stockQuantityInput) {
+                stockQuantityInput.addEventListener('input', checkStockQuantityMatch);
+                stockQuantityInput.addEventListener('change', checkStockQuantityMatch);
+            }
+
+            const requiresSerialCheckbox = document.getElementById('requiresSerialTracking');
+            if (requiresSerialCheckbox) {
+                requiresSerialCheckbox.addEventListener('change', checkStockQuantityMatch);
+            }
+
+            // Run initial check on page load
+            checkStockQuantityMatch();
+
+            // Product edit form submission check
             const productEditForm = document.getElementById('productEditForm');
             if (productEditForm) {
                 productEditForm.addEventListener('submit', function(e) {
-                    const stockInput = document.getElementById('stock_quantity');
-                    const trackingCheckbox = document.getElementById('requiresSerialTracking');
-                    if (!stockInput) return;
+                    const allowInput = document.getElementById('allowStockMismatch');
+                    if (allowInput && allowInput.value === '1') {
+                        return; // proceed with confirmed submission
+                    }
 
-                    const serialCount = getTrackedSerialsCount();
-                    const isTracked = (trackingCheckbox && trackingCheckbox.checked) || serialCount > 0;
-                    const stockVal = stockInput.value.trim();
-                    const stockQty = parseInt(stockVal, 10);
-
-                    if (isTracked && serialCount > 0 && !isNaN(stockQty) && stockQty !== serialCount) {
+                    const check = checkStockQuantityMatch();
+                    if (!check.matched && (check.type === 'more' || check.type === 'less')) {
                         e.preventDefault();
                         e.stopPropagation();
 
@@ -885,31 +965,56 @@ SN-AMD-90003">{{ old('serials_text') }}</textarea>
                             tabInstance.show();
                         }
 
-                        stockInput.classList.add('is-invalid');
+                        const msg = check.type === 'more'
+                            ? `Total stock quantity (${check.stockQty}) is more than tracked serial numbers (${check.serialCount}).`
+                            : `Total stock quantity (${check.stockQty}) is less than tracked serial numbers (${check.serialCount}).`;
 
-                        const msg = stockQty > serialCount
-                            ? `Total stock quantity (${stockQty}) is more than tracked serial numbers (${serialCount}).`
-                            : `Total stock quantity (${stockQty}) is less than tracked serial numbers (${serialCount}).`;
-
-                        // Show only ONE clean alert message (auto-dismisses after 3 seconds)
+                        // Show dismissible alert banner in Stock Quantities card
                         const alertContainer = document.getElementById('stockMismatchAlertContainer');
                         if (alertContainer) {
                             alertContainer.innerHTML = `
-                                <div class="alert alert-warning alert-dismissible fade show d-flex align-items-center gap-2 p-3 shadow-xs" role="alert">
-                                    <i class="bi bi-exclamation-triangle-fill text-warning fs-5 flex-shrink-0"></i>
-                                    <div class="flex-grow-1">
-                                        <strong>Stock Quantity Mismatch!</strong> ${msg}
+                                <div class="alert alert-warning alert-dismissible fade show d-flex align-items-center justify-content-between p-3 shadow-xs" role="alert">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="bi bi-exclamation-triangle-fill text-warning fs-5 flex-shrink-0"></i>
+                                        <div>
+                                            <strong>Stock &amp; Serial Number Mismatch!</strong><br>
+                                            ${msg} Please adjust total stock quantity to ${check.serialCount} or register matching serial numbers.
+                                        </div>
                                     </div>
-                                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <button type="button" class="btn btn-sm btn-dark font-monospace text-nowrap" onclick="syncStockQtyToSerials()">
+                                            <i class="bi bi-arrow-repeat me-1"></i>Set to ${check.serialCount}
+                                        </button>
+                                        <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close"></button>
+                                    </div>
                                 </div>
                             `;
                             alertContainer.classList.remove('d-none');
                             alertContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         }
 
-                        stockInput.focus();
-                    } else {
-                        stockInput.classList.remove('is-invalid');
+                        // Also open confirm modal dialog
+                        if (typeof window.confirmModal === 'function') {
+                            window.confirmModal({
+                                title: 'Stock Quantity Mismatch Alert',
+                                message: msg,
+                                detail: `You entered a total stock quantity of ${check.stockQty}, but there are ${check.serialCount} tracked serial numbers registered. Would you like to review and adjust your stock, or proceed anyway?`,
+                                type: 'warning',
+                                confirmText: 'Update Anyway',
+                                cancelText: 'Review & Adjust',
+                            }).then(function(confirmed) {
+                                if (confirmed) {
+                                    if (allowInput) allowInput.value = '1';
+                                    productEditForm.submit();
+                                } else {
+                                    const input = document.getElementById('stock_quantity');
+                                    if (input) {
+                                        input.focus();
+                                        input.select();
+                                    }
+                                }
+                            });
+                        }
                     }
                 });
             }
