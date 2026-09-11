@@ -157,7 +157,7 @@ it('alerts with error message when entering total stock qty more than serial num
         'status' => SerialNumber::STATUS_IN_STOCK,
     ]);
 
-    // Attempt to update stock quantity to 5 (more than 2 serial numbers)
+    // Attempt to update with stock quantity 5, it should automatically match 2 serial numbers
     $response = $this->actingAs($this->admin, 'backend')->put(route('admin.products.update', $product->id), [
         'category_id' => $this->category->id,
         'brand_id' => $this->brand->id,
@@ -169,14 +169,12 @@ it('alerts with error message when entering total stock qty more than serial num
         'requires_serial_tracking' => true,
     ]);
 
-    $response->assertRedirect(route('admin.products.edit', $product->id).'#inventory');
-    $response->assertSessionHas('error');
-    $errorMessage = session('error');
-    expect($errorMessage)->toContain('Total stock quantity (5) is more than tracked serial numbers (2)');
+    $response->assertRedirect(route('admin.products.index'));
+    $response->assertSessionHas('success');
     expect($product->fresh()->stock_quantity)->toBe(2);
 });
 
-it('alerts with error message when entering total stock qty less than serial numbers on update', function () {
+it('automatically matches total stock qty with serial numbers count on update when serialized', function () {
     $product = Product::create([
         'category_id' => $this->category->id,
         'brand_id' => $this->brand->id,
@@ -203,7 +201,7 @@ it('alerts with error message when entering total stock qty less than serial num
         'status' => SerialNumber::STATUS_IN_STOCK,
     ]);
 
-    // Attempt to update stock quantity to 1 (less than 2 serial numbers)
+    // Attempt to update with stock quantity 1, it should automatically match 2 serial numbers
     $response = $this->actingAs($this->admin, 'backend')->put(route('admin.products.update', $product->id), [
         'category_id' => $this->category->id,
         'brand_id' => $this->brand->id,
@@ -215,10 +213,8 @@ it('alerts with error message when entering total stock qty less than serial num
         'requires_serial_tracking' => true,
     ]);
 
-    $response->assertRedirect(route('admin.products.edit', $product->id).'#inventory');
-    $response->assertSessionHas('error');
-    $errorMessage = session('error');
-    expect($errorMessage)->toContain('Total stock quantity (1) is less than tracked serial numbers (2)');
+    $response->assertRedirect(route('admin.products.index'));
+    $response->assertSessionHas('success');
     expect($product->fresh()->stock_quantity)->toBe(2);
 });
 

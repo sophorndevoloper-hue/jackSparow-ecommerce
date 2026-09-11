@@ -218,6 +218,18 @@ class Product extends Model
     }
 
     /**
+     * Collections this product belongs to.
+     *
+     * @return BelongsToMany<ProductCollection, $this>
+     */
+    public function collections(): BelongsToMany
+    {
+        return $this->belongsToMany(ProductCollection::class, 'collection_product', 'product_id', 'collection_id')
+            ->withPivot('sort_order')
+            ->withTimestamps();
+    }
+
+    /**
      * Calculate absolute floor price based on cost_price and min_margin_percentage.
      */
     public function getFloorPrice(): float
@@ -283,6 +295,38 @@ class Product extends Model
      */
     public function syncTotalStock(): int
     {
+        $hasSerials = $this->serialNumbers()->exists();
+        if ($this->requires_serial_tracking || $hasSerials) {
+            $inStockCount = $this->serialNumbers()->where('status', SerialNumber::STATUS_IN_STOCK)->count();
+            $this->update(['stock_quantity' => $inStockCount]);
+
+            // Synchronize each warehouse's inventory to match in-stock serials
+            $countsByWarehouse = $this->serialNumbers()
+                ->where('status', SerialNumber::STATUS_IN_STOCK)
+                ->whereNotNull('warehouse_id')
+                ->groupBy('warehouse_id')
+                ->selectRaw('warehouse_id, count(*) as total')
+                ->pluck('total', 'warehouse_id')
+                ->toArray();
+
+            // Sync all warehouses attached to this product
+            foreach ($this->warehouses as $warehouse) {
+                $whCount = $countsByWarehouse[$warehouse->id] ?? 0;
+                $this->warehouses()->updateExistingPivot($warehouse->id, [
+                    'quantity' => $whCount,
+                ]);
+            }
+
+            // Attach any warehouses that hold serials but weren't attached yet
+            foreach ($countsByWarehouse as $whId => $whCount) {
+                if (! $this->warehouses()->where('warehouses.id', $whId)->exists()) {
+                    $this->warehouses()->attach($whId, ['quantity' => $whCount]);
+                }
+            }
+
+            return $inStockCount;
+        }
+
         $sum = (int) $this->warehouses()->sum('product_warehouse.quantity');
         $this->update(['stock_quantity' => $sum]);
 

@@ -9,6 +9,7 @@ use App\Models\SerialNumber;
 use App\Models\Warehouse;
 use App\Services\SerialImportService;
 use App\Services\SerialTrackingService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -175,14 +176,49 @@ class SerialNumberController extends Controller
     public function import(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'file' => ['required', 'file', 'max:10240'],
+            'file' => ['required_without:serials_text', 'nullable', 'file', 'max:10240'],
+            'serials_text' => ['nullable', 'string'],
             'product_id' => ['nullable', 'exists:products,id'],
             'warehouse_id' => ['nullable', 'exists:warehouses,id'],
             'cost_price' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         try {
-            $items = $this->serialImportService->parseFile($request->file('file'));
+            $items = [];
+            if ($request->hasFile('file')) {
+                $items = $this->serialImportService->parseFile($request->file('file'));
+            }
+
+            if ($request->filled('serials_text')) {
+                $lines = preg_split('/\r?\n/', trim((string) $request->input('serials_text')));
+                $editedSerials = array_values(array_filter(array_map('trim', $lines), fn ($s) => $s !== ''));
+
+                if (! empty($editedSerials)) {
+                    if (count($editedSerials) === count($items)) {
+                        foreach ($editedSerials as $idx => $serial) {
+                            $items[$idx]['serial_number'] = $serial;
+                        }
+                    } else {
+                        $newItems = [];
+                        foreach ($editedSerials as $idx => $serial) {
+                            $base = $items[$idx] ?? [
+                                'serial_number' => $serial,
+                                'product_sku' => null,
+                                'warehouse_code' => null,
+                                'cost_price' => null,
+                            ];
+                            $base['serial_number'] = $serial;
+                            $newItems[] = $base;
+                        }
+                        $items = $newItems;
+                    }
+                }
+            }
+
+            if (empty($items)) {
+                throw new \InvalidArgumentException('No serial numbers found to import.');
+            }
+
             $created = $this->serialImportService->importItems(
                 $items,
                 ! empty($validated['product_id']) ? (int) $validated['product_id'] : null,
@@ -209,5 +245,38 @@ class SerialNumberController extends Controller
     public function downloadTemplate(string $format): StreamedResponse
     {
         return $this->serialImportService->downloadTemplate($format);
+    }
+
+    /**
+     * Parse an uploaded file and return the extracted serial numbers for preview.
+     */
+    public function parsePreview(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'max:10240'],
+        ]);
+
+        try {
+            $items = $this->serialImportService->parseFile($request->file('file'));
+            $serials = [];
+            foreach ($items as $item) {
+                $sn = strtoupper(trim((string) ($item['serial_number'] ?? '')));
+                if ($sn !== '') {
+                    $serials[] = $sn;
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'count' => count($serials),
+                'serials' => $serials,
+                'text' => implode("\n", $serials),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
     }
 }

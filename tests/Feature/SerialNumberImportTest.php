@@ -202,3 +202,66 @@ it('rejects import if the file contains internal duplicates', function () {
     $response->assertSessionHas('error');
     expect(SerialNumber::where('serial_number', 'REPEAT-SN-001')->exists())->toBeFalse();
 });
+
+it('parses an uploaded file and returns serial numbers list for preview', function () {
+    $csvContent = "serial_number,product_sku,warehouse_code\n".
+        "PREVIEW-001,GPU-TEST-01,WH-MAIN\n".
+        "PREVIEW-002,GPU-TEST-01,WH-MAIN\n";
+
+    $file = UploadedFile::fake()->createWithContent('preview.csv', $csvContent);
+
+    $response = $this->actingAs($this->admin, 'backend')
+        ->postJson(route('admin.serial-numbers.parse-preview'), [
+            'file' => $file,
+        ]);
+
+    $response->assertOk();
+    $response->assertJson([
+        'success' => true,
+        'count' => 2,
+        'serials' => ['PREVIEW-001', 'PREVIEW-002'],
+    ]);
+    expect($response->json('text'))->toBe("PREVIEW-001\nPREVIEW-002");
+});
+
+it('prioritizes edited serials list from textarea over raw file on product edit', function () {
+    $rawCsvContent = "serial_number\nRAW-001\nRAW-002";
+    $file = UploadedFile::fake()->createWithContent('test.csv', $rawCsvContent);
+
+    // User edited the preview textarea to add EDITED-003 instead of RAW-002
+    $response = $this->actingAs($this->admin, 'backend')
+        ->postJson(route('admin.products.serials.store', $this->product->id), [
+            'warehouse_id' => $this->warehouse->id,
+            'file' => $file,
+            'serials_text' => "RAW-001\nEDITED-003",
+        ]);
+
+    $response->assertOk();
+    $response->assertJson([
+        'success' => true,
+        'count' => 2,
+    ]);
+
+    expect(SerialNumber::where('serial_number', 'RAW-001')->exists())->toBeTrue();
+    expect(SerialNumber::where('serial_number', 'EDITED-003')->exists())->toBeTrue();
+    expect(SerialNumber::where('serial_number', 'RAW-002')->exists())->toBeFalse();
+});
+
+it('prioritizes edited serials list from textarea over raw file in batch serial numbers import', function () {
+    $rawCsvContent = "serial_number,product_sku,warehouse_code\nBATCH-RAW-01,GPU-TEST-01,WH-MAIN\nBATCH-RAW-02,GPU-TEST-01,WH-MAIN";
+    $file = UploadedFile::fake()->createWithContent('batch.csv', $rawCsvContent);
+
+    // User edited the preview textarea to fix the second serial to BATCH-EDITED-02
+    $response = $this->actingAs($this->admin, 'backend')
+        ->post(route('admin.serial-numbers.import'), [
+            'file' => $file,
+            'serials_text' => "BATCH-RAW-01\nBATCH-EDITED-02",
+        ]);
+
+    $response->assertRedirect(route('admin.serial-numbers.index'));
+    $response->assertSessionHas('success');
+
+    expect(SerialNumber::where('serial_number', 'BATCH-RAW-01')->exists())->toBeTrue();
+    expect(SerialNumber::where('serial_number', 'BATCH-EDITED-02')->exists())->toBeTrue();
+    expect(SerialNumber::where('serial_number', 'BATCH-RAW-02')->exists())->toBeFalse();
+});

@@ -1,116 +1,276 @@
 <x-app-layout>
     <style>
-        .menu-action-chip {
-            background-color: rgba(15, 23, 42, 0.04);
-            border: 1px solid rgba(15, 23, 42, 0.12);
-            border-radius: 8px;
-            padding: 6px 10px;
-            display: inline-flex;
-            flex-direction: column;
-            gap: 4px;
-            text-align: left;
-            min-width: 140px;
-            transition: all 0.15s ease;
-        }
-        .menu-action-chip .action-title {
-            font-weight: 600;
-            font-size: 11.5px;
-            color: #1e293b;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        .menu-action-chip .action-perm {
-            font-family: SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-            font-size: 10px;
-            color: #2563eb;
-            background-color: rgba(37, 99, 235, 0.08);
-            padding: 2px 6px;
-            border-radius: 4px;
-            border: 1px solid rgba(37, 99, 235, 0.2);
-            display: inline-block;
-            width: fit-content;
-        }
-        html[data-theme="dark"] .menu-action-chip {
-            background-color: #1e293b !important;
-            border-color: #334155 !important;
-        }
-        html[data-theme="dark"] .menu-action-chip .action-title {
-            color: #f8fafc !important;
-        }
-        html[data-theme="dark"] .menu-action-chip .action-perm {
-            color: #93c5fd !important;
-            background-color: rgba(37, 99, 235, 0.2) !important;
-            border-color: rgba(96, 165, 250, 0.3) !important;
-        }
-
         /* Modern Parent Row & Collapse Styles */
         .parent-menu-row {
-            transition: background-color 0.25s ease, border-color 0.25s ease, opacity 0.25s ease;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
         }
         .parent-menu-row:hover {
-            background-color: rgba(37, 99, 235, 0.04) !important;
+            background-color: rgba(59, 130, 246, 0.04) !important;
         }
         .parent-menu-row.is-open {
-            background-color: rgba(37, 99, 235, 0.05) !important;
+            background-color: rgba(59, 130, 246, 0.06) !important;
             border-left: 3px solid #2563eb !important;
         }
         html[data-theme="dark"] .parent-menu-row:hover {
             background-color: rgba(59, 130, 246, 0.08) !important;
         }
         html[data-theme="dark"] .parent-menu-row.is-open {
-            background-color: rgba(59, 130, 246, 0.1) !important;
+            background-color: rgba(59, 130, 246, 0.12) !important;
             border-left: 3px solid #3b82f6 !important;
         }
-        .dropdown-toggle-btn {
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+        /* Dropdown Trigger Pill */
+        /* Parent Group & Direct Child Row Hierarchy Styling */
+        .parent-group-row {
+            background-color: rgba(59, 130, 246, 0.04);
+            border-top: 1px solid rgba(148, 163, 184, 0.25);
         }
-        .dropdown-toggle-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.18) !important;
+        html[data-theme="dark"] .parent-group-row {
+            background-color: rgba(30, 41, 59, 0.45);
+            border-top-color: rgba(148, 163, 184, 0.15);
         }
-        .parent-chevron {
-            display: inline-block;
-            transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+        .child-menu-row {
+            background-color: rgba(248, 250, 252, 0.4);
+            border-left: 2px solid rgba(59, 130, 246, 0.35);
         }
-        .parent-menu-row.is-open .parent-chevron,
-        .dropdown-toggle-btn[aria-expanded="true"] .parent-chevron {
-            transform: rotate(90deg);
+        html[data-theme="dark"] .child-menu-row {
+            background-color: rgba(15, 23, 42, 0.25);
+            border-left-color: rgba(96, 165, 250, 0.35);
         }
-        
-        /* Smooth Collapse Animation */
-        .collapse {
-            transition: height 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+        .child-tree-connector {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            color: #94a3b8;
+            font-family: SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-weight: 700;
+            font-size: 14px;
+            user-select: none;
+            flex-shrink: 0;
         }
-        .collapsing {
-            transition: height 0.32s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        html[data-theme="dark"] .child-tree-connector {
+            color: #64748b;
+        }
+
+        /* Menu Icons */
+        .menu-icon-box {
+            width: 38px;
+            height: 38px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 17px;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(99, 102, 241, 0.06));
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+            flex-shrink: 0;
+        }
+        .menu-icon-child {
+            width: 28px;
+            height: 28px;
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            background: rgba(100, 116, 139, 0.1);
+            border: 1px solid rgba(100, 116, 139, 0.2);
+            color: #64748b;
+            flex-shrink: 0;
+        }
+        html[data-theme="dark"] .menu-icon-child {
+            background: rgba(148, 163, 184, 0.12);
+            border-color: rgba(148, 163, 184, 0.2);
+            color: #94a3b8;
+        }
+
+        /* Modern Sort Control Pill */
+        .sort-pill-box {
+            display: inline-flex;
+            align-items: center;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 6px;
             overflow: hidden;
+            background: var(--bs-body-bg);
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
         }
-        .child-panel-container {
-            background-color: rgba(248, 250, 252, 0.85);
-            border-left: 3px solid #3b82f6;
-            border-radius: 0 10px 10px 0;
-            box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.03), 0 4px 12px rgba(0, 0, 0, 0.03);
-            transform-origin: top center;
-            transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            will-change: transform, opacity;
+        .sort-pill-box:focus-within {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
         }
-        .collapse:not(.show):not(.collapsing) .child-panel-container {
-            opacity: 0;
-            transform: translateY(-6px);
+        .sort-pill-input {
+            width: 44px;
+            height: 25px;
+            border: none;
+            background: transparent;
+            text-align: center;
+            font-family: SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: var(--bs-body-color);
+            padding: 0;
         }
-        .collapsing .child-panel-container {
-            opacity: 0.8;
-            transform: translateY(-3px);
+        .sort-pill-input:focus {
+            outline: none;
         }
-        .collapse.show .child-panel-container {
-            opacity: 1;
-            transform: translateY(0);
+        .sort-pill-btn {
+            width: 24px;
+            height: 25px;
+            border: none;
+            border-left: 1px solid rgba(148, 163, 184, 0.2);
+            background: transparent;
+            color: #64748b;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.15s ease;
         }
-        html[data-theme="dark"] .child-panel-container {
-            background-color: rgba(15, 23, 42, 0.6);
-            border-left-color: #60a5fa;
-            box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.2);
+        .sort-pill-btn:hover {
+            background-color: rgba(59, 130, 246, 0.15);
+            color: #2563eb;
+        }
+        html[data-theme="dark"] .sort-pill-box {
+            background: rgba(15, 23, 42, 0.6);
+            border-color: rgba(148, 163, 184, 0.25);
+        }
+        html[data-theme="dark"] .sort-pill-btn {
+            border-left-color: rgba(148, 163, 184, 0.2);
+            color: #94a3b8;
+        }
+
+        /* Route Pill Badge */
+        .route-pill {
+            font-size: 11px;
+            font-family: SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            color: #64748b;
+            background-color: rgba(100, 116, 139, 0.08);
+            border: 1px solid rgba(100, 116, 139, 0.15);
+            padding: 1px 7px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        html[data-theme="dark"] .route-pill {
+            color: #94a3b8;
+            background-color: rgba(148, 163, 184, 0.1);
+            border-color: rgba(148, 163, 184, 0.2);
+        }
+
+        /* Permission Pill */
+        .perm-badge {
+            font-size: 11px;
+            font-family: SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-weight: 500;
+            padding: 3px 8px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            color: #0284c7;
+            background-color: rgba(2, 132, 199, 0.08);
+            border: 1px solid rgba(2, 132, 199, 0.25);
+            white-space: nowrap;
+        }
+        html[data-theme="dark"] .perm-badge {
+            color: #38bdf8;
+            background-color: rgba(56, 189, 248, 0.12);
+            border-color: rgba(56, 189, 248, 0.3);
+        }
+
+        /* Action Badges with High Contrast in Dark & Light Mode */
+        .action-chip {
+            font-size: 10px;
+            font-family: SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-weight: 600;
+            padding: 2px 7px;
+            border-radius: 5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            letter-spacing: 0.2px;
+            white-space: nowrap;
+        }
+        .action-chip-view {
+            color: #1d4ed8;
+            background-color: rgba(29, 78, 216, 0.08);
+            border: 1px solid rgba(29, 78, 216, 0.2);
+        }
+        html[data-theme="dark"] .action-chip-view {
+            color: #60a5fa !important;
+            background-color: rgba(96, 165, 250, 0.14) !important;
+            border-color: rgba(96, 165, 250, 0.3) !important;
+        }
+        .action-chip-create {
+            color: #15803d;
+            background-color: rgba(21, 128, 61, 0.08);
+            border: 1px solid rgba(21, 128, 61, 0.2);
+        }
+        html[data-theme="dark"] .action-chip-create {
+            color: #4ade80 !important;
+            background-color: rgba(74, 222, 128, 0.14) !important;
+            border-color: rgba(74, 222, 128, 0.3) !important;
+        }
+        .action-chip-edit {
+            color: #b45309;
+            background-color: rgba(180, 83, 9, 0.08);
+            border: 1px solid rgba(180, 83, 9, 0.2);
+        }
+        html[data-theme="dark"] .action-chip-edit {
+            color: #fbbf24 !important;
+            background-color: rgba(251, 191, 36, 0.14) !important;
+            border-color: rgba(251, 191, 36, 0.3) !important;
+        }
+        .action-chip-delete {
+            color: #b91c1c;
+            background-color: rgba(185, 28, 28, 0.08);
+            border: 1px solid rgba(185, 28, 28, 0.2);
+        }
+        html[data-theme="dark"] .action-chip-delete {
+            color: #f87171 !important;
+            background-color: rgba(248, 113, 113, 0.14) !important;
+            border-color: rgba(248, 113, 113, 0.3) !important;
+        }
+
+        /* Status Pills */
+        .status-badge-active {
+            font-size: 11px;
+            font-weight: 600;
+            color: #15803d;
+            background-color: rgba(21, 128, 61, 0.1);
+            border: 1px solid rgba(21, 128, 61, 0.25);
+            border-radius: 9999px;
+            padding: 3px 10px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+        html[data-theme="dark"] .status-badge-active {
+            color: #4ade80;
+            background-color: rgba(74, 222, 128, 0.14);
+            border-color: rgba(74, 222, 128, 0.3);
+        }
+        .status-badge-hidden {
+            font-size: 11px;
+            font-weight: 500;
+            color: #64748b;
+            background-color: rgba(100, 116, 139, 0.1);
+            border: 1px solid rgba(100, 116, 139, 0.2);
+            border-radius: 9999px;
+            padding: 3px 10px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+        html[data-theme="dark"] .status-badge-hidden {
+            color: #94a3b8;
+            background-color: rgba(148, 163, 184, 0.12);
+            border-color: rgba(148, 163, 184, 0.2);
         }
     </style>
 
@@ -126,6 +286,14 @@
                 </div>
             </div>
             <div class="heading-actions d-flex flex-wrap align-items-center gap-2">
+                @if($disabledMenus > 0)
+                    <form action="{{ route('admin.menus.reset-visibility') }}" method="POST" class="d-inline">
+                        @csrf
+                        <button type="submit" class="btn btn-outline-success btn-sm shadow-sm" title="Restore all hidden menus so they are visible again in your navigation">
+                            <i class="bi bi-eye me-1"></i> Restore All Menus ({{ $disabledMenus }} Hidden)
+                        </button>
+                    </form>
+                @endif
                 @can('edit settings')
                     <form action="{{ route('admin.menus.sync') }}" method="POST" class="d-inline">
                         @csrf
@@ -194,15 +362,25 @@
                 </div>
             </div>
             <div class="col-12 col-sm-6 col-xl-3">
-                <div class="panel p-3 h-100 d-flex align-items-center gap-3">
-                    <div class="rounded-3 bg-secondary-subtle text-secondary p-3 fs-3 d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
-                        <i class="bi bi-slash-circle"></i>
+                <div class="panel p-3 h-100 d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-3 bg-secondary-subtle text-secondary p-3 fs-3 d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
+                            <i class="bi bi-slash-circle"></i>
+                        </div>
+                        <div>
+                            <div class="text-muted small fw-bold text-uppercase">Hidden For You</div>
+                            <div class="fs-4 fw-bold text-muted" id="disabled-count-kpi">{{ $disabledMenus }}</div>
+                            <small class="text-muted">Hidden in this session</small>
+                        </div>
                     </div>
-                    <div>
-                        <div class="text-muted small fw-bold text-uppercase">Hidden For You</div>
-                        <div class="fs-4 fw-bold text-muted" id="disabled-count-kpi">{{ $disabledMenus }}</div>
-                        <small class="text-muted">Hidden in this session</small>
-                    </div>
+                    @if($disabledMenus > 0)
+                        <form action="{{ route('admin.menus.reset-visibility') }}" method="POST" class="d-inline">
+                            @csrf
+                            <button type="submit" class="btn btn-sm btn-outline-success py-1 px-2 font-monospace" style="font-size: 11px;" title="Restore all hidden menus">
+                                <i class="bi bi-eye"></i> Show All
+                            </button>
+                        </form>
+                    @endif
                 </div>
             </div>
             <div class="col-12 col-sm-6 col-xl-3">
@@ -261,7 +439,7 @@
                                     <th style="width: 110px;"><i class="bi bi-arrow-down-up me-1"></i> Sort</th>
                                     <th>Menu Title &amp; Route</th>
                                     <th>View Permission</th>
-                                    <th>Actions &amp; Permission Mapping</th>
+                                    <th>Actions</th>
                                     <th>Status</th>
                                     <th class="text-end" style="min-width: 190px;">Controls</th>
                                 </tr>
@@ -271,282 +449,336 @@
                                     @php
                                         $childMenus = $sectionMenus->filter(fn ($m) => $m->parent_slug === $menu->slug);
                                         $hasChildren = $childMenus->isNotEmpty();
-                                        $isParentActive = $menu->is_active_for_session ?? \App\Models\AdminMenu::isMenuActiveForSession($menu);
+                                        $isProtected = \App\Models\AdminMenu::isProtected($menu);
+                                        $isParentActive = $isProtected || ($menu->is_active_for_session ?? \App\Models\AdminMenu::isMenuActiveForSession($menu));
                                     @endphp
 
-                                    <!-- Top-Level Menu Row -->
-                                    <tr class="parent-menu-row {{ ! $isParentActive ? 'opacity-75 bg-light' : '' }}" id="parent-row-{{ $menu->slug }}">
-                                        <td>
-                                            <form action="{{ route('admin.menus.sort', $menu->id) }}" method="POST" class="d-flex align-items-center gap-1 sort-menu-form" data-menu-id="{{ $menu->id }}">
-                                                @csrf
-                                                @method('PATCH')
-                                                <input type="number" 
-                                                       name="sort_order" 
-                                                       value="{{ $menu->sort_order }}" 
-                                                       min="0" 
-                                                       max="9999" 
-                                                       class="form-control form-control-sm text-center font-monospace px-1 py-0 sort-input" 
-                                                       style="width: 58px; height: 28px; font-size: 12px;" 
-                                                       title="Sort order number for {{ $menu->title }}">
-                                                <button type="submit" class="btn btn-sm btn-outline-primary py-0 px-2 sort-save-btn" style="height: 28px;" title="Save sort order">
-                                                    <i class="bi bi-check2"></i>
-                                                </button>
-                                            </form>
-                                        </td>
-                                        <td>
-                                            <div class="d-flex align-items-center gap-3">
-                                                <div class="rounded bg-light border p-2 text-primary d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                                                    <i class="bi {{ $menu->icon }} fs-5"></i>
+                                    @if($hasChildren)
+                                        <!-- Parent Group Header Row (Direct, No Dropdown) -->
+                                        <tr class="parent-group-row {{ ! $isParentActive ? 'opacity-75 bg-light' : '' }}" id="parent-row-{{ $menu->slug }}">
+                                            <td onclick="event.stopPropagation();">
+                                                <form action="{{ route('admin.menus.sort', $menu->id) }}" method="POST" class="sort-menu-form" data-menu-id="{{ $menu->id }}">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <div class="sort-pill-box">
+                                                        <input type="number" 
+                                                               name="sort_order" 
+                                                               value="{{ $menu->sort_order }}" 
+                                                               min="0" 
+                                                               max="9999" 
+                                                               class="sort-pill-input" 
+                                                               title="Sort order for {{ $menu->title }}">
+                                                        <button type="submit" class="sort-pill-btn" title="Save sort order">
+                                                            <i class="bi bi-check2"></i>
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex align-items-center gap-3">
+                                                    <div class="menu-icon-box">
+                                                        <i class="bi {{ $menu->icon }}"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                            <strong class="text-dark fs-6">{{ $menu->title }}</strong>
+                                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace" style="font-size: 10.5px;">
+                                                                <i class="bi bi-folder2-open me-1"></i>Group ({{ $childMenus->count() }} items)
+                                                            </span>
+                                                        </div>
+                                                        <span class="text-muted small">Parent Group</span>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <div class="d-flex align-items-center gap-2">
-                                                        <strong class="text-dark">{{ $menu->title }}</strong>
-                                                        @if($hasChildren)
-                                                            <button type="button" 
-                                                                    class="btn btn-sm btn-outline-primary dropdown-toggle-btn py-0 px-2 font-monospace shadow-none" 
-                                                                    style="font-size: 11px;"
-                                                                    data-bs-toggle="collapse" 
-                                                                    data-bs-target="#collapse-{{ $menu->slug }}" 
-                                                                    aria-expanded="false" 
-                                                                    title="Click to expand or collapse {{ $menu->title }} sub-items">
-                                                                <i class="bi bi-chevron-right me-1 parent-chevron"></i>Dropdown ({{ $childMenus->count() }} items)
+                                            </td>
+                                            <td colspan="2" class="align-middle">
+                                                <span class="badge bg-body-secondary text-secondary border font-monospace px-2 py-1" style="font-size: 11px;">
+                                                    <i class="bi bi-shield-check text-primary me-1"></i>Inherited from sub-items
+                                                </span>
+                                            </td>
+                                            <td id="status-cell-{{ $menu->id }}">
+                                                @if($isProtected)
+                                                    <span class="status-badge-active" title="Permanent core system component">
+                                                        <i class="bi bi-shield-check"></i> Permanent
+                                                    </span>
+                                                @elseif($isParentActive)
+                                                    <span class="status-badge-active">
+                                                        <i class="bi bi-check-circle-fill"></i> Active
+                                                    </span>
+                                                @else
+                                                    <span class="status-badge-hidden">
+                                                        <i class="bi bi-eye-slash"></i> Hidden (You)
+                                                    </span>
+                                                @endif
+                                            </td>
+                                            <td class="text-end" onclick="event.stopPropagation();">
+                                                <a href="{{ route('admin.menus.edit', $menu->id) }}" class="btn btn-sm btn-outline-primary py-0 px-2 font-monospace me-1" style="font-size: 11.5px; height: 26px; line-height: 24px;" title="Edit Menu Attributes & Order">
+                                                    <i class="bi bi-pencil"></i> Edit
+                                                </a>
+                                                @if($isProtected)
+                                                    <span class="badge bg-secondary-subtle text-secondary border font-monospace py-1 px-2" style="font-size: 11px; height: 26px; line-height: 18px; display: inline-flex; align-items: center;" title="Core system menu - cannot be hidden">
+                                                        <i class="bi bi-shield-lock text-primary me-1"></i> Core
+                                                    </span>
+                                                @else
+                                                    <form action="{{ route('admin.menus.toggle-active', $menu->id) }}" 
+                                                          method="POST" 
+                                                          class="d-inline toggle-menu-form"
+                                                          data-menu-id="{{ $menu->id }}"
+                                                          data-is-parent="1"
+                                                          data-slug="{{ $menu->slug }}">
+                                                        @csrf
+                                                        @method('PATCH')
+                                                        @if($isParentActive)
+                                                            <button type="submit" class="btn btn-sm btn-outline-warning py-0 px-2 font-monospace" style="font-size: 11.5px; height: 26px; line-height: 24px;" title="Hide this group and all its sub-items">
+                                                                <i class="bi bi-eye-slash"></i> Hide Group
+                                                            </button>
+                                                        @else
+                                                            <button type="submit" class="btn btn-sm btn-outline-success py-0 px-2 font-monospace" style="font-size: 11.5px; height: 26px; line-height: 24px;" title="Show this group and all its sub-items">
+                                                                <i class="bi bi-eye"></i> Show Group
                                                             </button>
                                                         @endif
-                                                    </div>
-                                                    @if($menu->route_name)
-                                                        <code class="text-muted small font-monospace">{{ $menu->route_name }}</code>
-                                                    @else
-                                                        <span class="text-muted small">Collapsible dropdown container</span>
-                                                    @endif
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            @if($menu->view_permission)
-                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace">
-                                                    <i class="bi bi-eye me-1"></i> {{ $menu->view_permission }}
-                                                </span>
-                                            @elseif($hasChildren)
-                                                <span class="text-muted small">Inherited from sub-items</span>
-                                            @else
-                                                <span class="text-muted small">Public (All authenticated)</span>
-                                            @endif
-                                        </td>
-                                        <td>
-                                            <div class="d-flex flex-wrap gap-2" style="max-width: 540px;">
-                                                @forelse($menu->actions ?? [] as $action)
-                                                    @php
-                                                        $permName = $action['permission'] ?? '';
-                                                        $type = $action['action_type'] ?? '';
-                                                        $badgeColor = match($type) {
-                                                            'view' => 'primary',
-                                                            'create' => 'success',
-                                                            'edit' => 'warning',
-                                                            'delete' => 'danger',
-                                                            default => 'secondary'
-                                                        };
-                                                        $iconClass = match($type) {
-                                                            'view' => 'bi-eye',
-                                                            'create' => 'bi-plus-circle',
-                                                            'edit' => 'bi-pencil',
-                                                            'delete' => 'bi-trash',
-                                                            default => 'bi-check-circle-fill text-success'
-                                                        };
-                                                    @endphp
-                                                    <div class="menu-action-chip">
-                                                        <span class="action-title">
-                                                            <i class="bi {{ $iconClass }} text-{{ $badgeColor }}" style="font-size: 11px;"></i>
-                                                            {{ $action['name'] }}
-                                                        </span>
-                                                        <span class="action-perm">{{ $permName }}</span>
-                                                    </div>
-                                                @empty
-                                                    @if($hasChildren)
-                                                        <span class="text-muted small"><i class="bi bi-diagram-2 me-1"></i>Pure dropdown parent (actions on sub-items)</span>
-                                                    @else
-                                                        <span class="text-muted small">No child actions</span>
-                                                    @endif
-                                                @endforelse
-                                            </div>
-                                        </td>
-                                        <td id="status-cell-{{ $menu->id }}">
-                                            @if($isParentActive)
-                                                <span class="badge bg-success-subtle text-success border border-success-subtle">
-                                                    <i class="bi bi-check-circle-fill me-1"></i> Active
-                                                </span>
-                                            @else
-                                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
-                                                    <i class="bi bi-eye-slash me-1"></i> Hidden (You)
-                                                </span>
-                                            @endif
-                                        </td>
-                                        <td class="text-end" onclick="event.stopPropagation();">
-                                            <a href="{{ route('admin.menus.edit', $menu->id) }}" class="btn btn-sm btn-outline-primary me-1" title="Edit Menu Attributes & Order">
-                                                <i class="bi bi-pencil"></i> Edit
-                                            </a>
-                                            <!-- Async Toggle Button (Hides parent & all children without full reload) -->
-                                            <form action="{{ route('admin.menus.toggle-active', $menu->id) }}" 
-                                                  method="POST" 
-                                                  class="d-inline toggle-menu-form"
-                                                  data-menu-id="{{ $menu->id }}"
-                                                  data-is-parent="{{ $hasChildren ? '1' : '0' }}"
-                                                  data-slug="{{ $menu->slug }}">
-                                                @csrf
-                                                @method('PATCH')
-                                                @if($isParentActive)
-                                                    <button type="submit" class="btn btn-sm btn-outline-warning" title="Hide this menu (and all its sub-items) from your sidebar navigation">
-                                                        <i class="bi bi-eye-slash"></i> Hide
-                                                    </button>
-                                                @else
-                                                    <button type="submit" class="btn btn-sm btn-outline-success" title="Show this menu (and its sub-items) in your sidebar navigation">
-                                                        <i class="bi bi-eye"></i> Show
-                                                    </button>
+                                                    </form>
                                                 @endif
-                                            </form>
-                                        </td>
-                                    </tr>
+                                            </td>
+                                        </tr>
 
-                                    <!-- Collapsible Nested Children Container -->
-                                    @if($hasChildren)
-                                        <tr class="p-0 border-0">
-                                            <td colspan="6" class="p-0 border-0">
-                                                <div class="collapse" id="collapse-{{ $menu->slug }}">
-                                                    <div class="child-panel-container my-2 ms-4 me-3 p-3">
-                                                        <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
-                                                            <span class="small fw-bold text-primary text-uppercase font-monospace">
-                                                                <i class="bi bi-diagram-3 me-1"></i> {{ $menu->title }} Sub-Items ({{ $childMenus->count() }})
-                                                            </span>
-                                                            <small class="text-muted">Sub-menu navigation items under {{ $menu->title }}</small>
+                                        <!-- Direct Child Rows under Parent Group (Always Visible, No Dropdown/Collapse) -->
+                                        @foreach($childMenus as $child)
+                                            @php
+                                                $isChildProtected = \App\Models\AdminMenu::isProtected($child);
+                                                $isChildActive = $isChildProtected || ($isParentActive && ($child->is_active_for_session ?? \App\Models\AdminMenu::isMenuActiveForSession($child)));
+                                            @endphp
+                                            <tr class="child-menu-row {{ ! $isChildActive ? 'opacity-75 bg-light' : '' }}" id="child-row-{{ $child->id }}">
+                                                <td onclick="event.stopPropagation();" class="ps-3">
+                                                    <form action="{{ route('admin.menus.sort', $child->id) }}" method="POST" class="sort-menu-form" data-menu-id="{{ $child->id }}">
+                                                        @csrf
+                                                        @method('PATCH')
+                                                        <div class="sort-pill-box">
+                                                            <input type="number" 
+                                                                   name="sort_order" 
+                                                                   value="{{ $child->sort_order }}" 
+                                                                   min="0" 
+                                                                   max="9999" 
+                                                                   class="sort-pill-input" 
+                                                                   title="Sort order for {{ $child->title }}">
+                                                            <button type="submit" class="sort-pill-btn" title="Save sort order">
+                                                                <i class="bi bi-check2"></i>
+                                                            </button>
                                                         </div>
-
-                                                        <div class="table-responsive">
-                                                             <table class="table table-sm align-middle mb-0">
-                                                                <thead>
-                                                                    <tr class="text-muted small">
-                                                                        <th style="width: 105px;"><i class="bi bi-arrow-down-up me-1"></i> Sort</th>
-                                                                        <th>Sub-Item Title &amp; Route</th>
-                                                                        <th>Permission</th>
-                                                                        <th>Actions</th>
-                                                                        <th>Status</th>
-                                                                        <th class="text-end">Controls</th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                    @foreach($childMenus as $child)
-                                                                        @php
-                                                                            $isChildActive = $isParentActive && ($child->is_active_for_session ?? \App\Models\AdminMenu::isMenuActiveForSession($child));
-                                                                        @endphp
-                                                                        <tr class="{{ ! $isChildActive ? 'opacity-75 bg-light' : '' }}" id="child-row-{{ $child->id }}">
-                                                                            <td>
-                                                                                <form action="{{ route('admin.menus.sort', $child->id) }}" method="POST" class="d-flex align-items-center gap-1 sort-menu-form" data-menu-id="{{ $child->id }}">
-                                                                                    @csrf
-                                                                                    @method('PATCH')
-                                                                                    <input type="number" 
-                                                                                           name="sort_order" 
-                                                                                           value="{{ $child->sort_order }}" 
-                                                                                           min="0" 
-                                                                                           max="9999" 
-                                                                                           class="form-control form-control-sm text-center font-monospace px-1 py-0 sort-input" 
-                                                                                           style="width: 52px; height: 24px; font-size: 11px;" 
-                                                                                           title="Sort order number for {{ $child->title }}">
-                                                                                    <button type="submit" class="btn btn-sm btn-outline-primary py-0 px-1 sort-save-btn" style="height: 24px; font-size: 11px;" title="Save sort order">
-                                                                                        <i class="bi bi-check2"></i>
-                                                                                    </button>
-                                                                                </form>
-                                                                            </td>
-                                                                            <td>
-                                                                                <div class="d-flex align-items-center gap-2">
-                                                                                    <div class="rounded bg-light border p-1 text-primary d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
-                                                                                        <i class="bi {{ $child->icon }}" style="font-size: 13px;"></i>
-                                                                                    </div>
-                                                                                    <div>
-                                                                                        <strong class="text-dark d-block" style="font-size: 13px;">{{ $child->title }}</strong>
-                                                                                        <code class="text-muted font-monospace" style="font-size: 11px;">{{ $child->route_name }}</code>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </td>
-                                                                            <td>
-                                                                                @if($child->view_permission)
-                                                                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace" style="font-size: 10.5px;">
-                                                                                        <i class="bi bi-eye me-1"></i> {{ $child->view_permission }}
-                                                                                    </span>
-                                                                                @else
-                                                                                    <span class="text-muted small">Public</span>
-                                                                                @endif
-                                                                            </td>
-                                                                            <td>
-                                                                                <div class="d-flex flex-wrap gap-1" style="max-width: 420px;">
-                                                                                    @forelse($child->actions ?? [] as $action)
-                                                                                        @php
-                                                                                            $type = $action['action_type'] ?? '';
-                                                                                            $badgeColor = match($type) {
-                                                                                                'view' => 'primary',
-                                                                                                'create' => 'success',
-                                                                                                'edit' => 'warning',
-                                                                                                'delete' => 'danger',
-                                                                                                default => 'secondary'
-                                                                                            };
-                                                                                            $iconClass = match($type) {
-                                                                                                'view' => 'bi-eye',
-                                                                                                'create' => 'bi-plus-circle',
-                                                                                                'edit' => 'bi-pencil',
-                                                                                                'delete' => 'bi-trash',
-                                                                                                default => 'bi-check'
-                                                                                            };
-                                                                                        @endphp
-                                                                                        <span class="badge bg-{{ $badgeColor }}-subtle text-{{ $badgeColor }} border border-{{ $badgeColor }}-subtle font-monospace py-1 px-2" style="font-size: 10px;">
-                                                                                            <i class="bi {{ $iconClass }} me-1"></i>{{ $action['name'] }}
-                                                                                        </span>
-                                                                                    @empty
-                                                                                        <span class="text-muted small">—</span>
-                                                                                    @endforelse
-                                                                                </div>
-                                                                            </td>
-                                                                            <td id="status-cell-{{ $child->id }}">
-                                                                                @if(! $isParentActive)
-                                                                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle" style="font-size: 10px;">
-                                                                                        <i class="bi bi-eye-slash me-1"></i> Hidden (Parent)
-                                                                                    </span>
-                                                                                @elseif($isChildActive)
-                                                                                    <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 10px;">
-                                                                                        <i class="bi bi-check-circle-fill me-1"></i> Active
-                                                                                    </span>
-                                                                                @else
-                                                                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle" style="font-size: 10px;">
-                                                                                        <i class="bi bi-eye-slash me-1"></i> Hidden (You)
-                                                                                    </span>
-                                                                                @endif
-                                                                            </td>
-                                                                            <td class="text-end">
-                                                                                <a href="{{ route('admin.menus.edit', $child->id) }}" class="btn btn-outline-primary py-0 px-2 me-1" style="font-size: 11px;" title="Edit Sub-item">
-                                                                                    <i class="bi bi-pencil"></i> Edit
-                                                                                </a>
-                                                                                <form action="{{ route('admin.menus.toggle-active', $child->id) }}" 
-                                                                                      method="POST" 
-                                                                                      class="d-inline toggle-menu-form"
-                                                                                      data-menu-id="{{ $child->id }}"
-                                                                                      data-is-parent="0"
-                                                                                      data-parent-slug="{{ $menu->slug }}">
-                                                                                    @csrf
-                                                                                    @method('PATCH')
-                                                                                    @if($isChildActive)
-                                                                                        <button type="submit" class="btn btn-outline-warning py-0 px-2" style="font-size: 11px;" title="Hide this sub-item from your navigation">
-                                                                                            <i class="bi bi-eye-slash"></i> Hide
-                                                                                        </button>
-                                                                                    @else
-                                                                                        <button type="submit" class="btn btn-outline-success py-0 px-2" style="font-size: 11px;" title="Show this sub-item in your navigation">
-                                                                                            <i class="bi bi-eye"></i> Show
-                                                                                        </button>
-                                                                                    @endif
-                                                                                </form>
-                                                                            </td>
-                                                                        </tr>
-                                                                    @endforeach
-                                                                </tbody>
-                                                            </table>
+                                                    </form>
+                                                </td>
+                                                <td>
+                                                    <div class="d-flex align-items-center gap-2 ps-2">
+                                                        <span class="child-tree-connector">↳</span>
+                                                        <div class="menu-icon-child">
+                                                            <i class="bi {{ $child->icon }}"></i>
+                                                        </div>
+                                                        <div>
+                                                            <strong class="text-dark d-block" style="font-size: 13px;">{{ $child->title }}</strong>
+                                                            <code class="route-pill">{{ $child->route_name }}</code>
                                                         </div>
                                                     </div>
+                                                </td>
+                                                <td>
+                                                    @if($child->view_permission)
+                                                        <span class="perm-badge">
+                                                            <i class="bi bi-key-fill"></i> {{ $child->view_permission }}
+                                                        </span>
+                                                    @else
+                                                        <span class="text-muted small font-monospace">Public</span>
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    <div class="d-flex flex-wrap gap-1 align-items-center" style="max-width: 440px;">
+                                                        @forelse($child->actions ?? [] as $action)
+                                                            @php
+                                                                $type = $action['action_type'] ?? '';
+                                                                $pillClass = match($type) {
+                                                                    'view' => 'action-chip-view',
+                                                                    'create' => 'action-chip-create',
+                                                                    'edit' => 'action-chip-edit',
+                                                                    'delete' => 'action-chip-delete',
+                                                                    default => 'action-chip-view'
+                                                                };
+                                                                $iconClass = match($type) {
+                                                                    'view' => 'bi-eye',
+                                                                    'create' => 'bi-plus-circle',
+                                                                    'edit' => 'bi-pencil',
+                                                                    'delete' => 'bi-trash',
+                                                                    default => 'bi-check'
+                                                                };
+                                                                $permName = $action['permission'] ?? '';
+                                                            @endphp
+                                                            <span class="action-chip {{ $pillClass }}" title="{{ $permName ? 'Permission: '.$permName : 'Public' }}">
+                                                                <i class="bi {{ $iconClass }}"></i>{{ $action['name'] }}
+                                                            </span>
+                                                        @empty
+                                                            <span class="text-muted small font-monospace">—</span>
+                                                        @endforelse
+                                                    </div>
+                                                </td>
+                                                <td id="status-cell-{{ $child->id }}">
+                                                    @if($isChildProtected)
+                                                        <span class="status-badge-active" title="Permanent core system component">
+                                                            <i class="bi bi-shield-check"></i> Permanent
+                                                        </span>
+                                                    @elseif(! $isParentActive)
+                                                        <span class="status-badge-hidden">
+                                                            <i class="bi bi-eye-slash"></i> Hidden (Parent)
+                                                        </span>
+                                                    @elseif($isChildActive)
+                                                        <span class="status-badge-active">
+                                                            <i class="bi bi-check-circle-fill"></i> Active
+                                                        </span>
+                                                    @else
+                                                        <span class="status-badge-hidden">
+                                                            <i class="bi bi-eye-slash"></i> Hidden (You)
+                                                        </span>
+                                                    @endif
+                                                </td>
+                                                <td class="text-end" onclick="event.stopPropagation();">
+                                                    <a href="{{ route('admin.menus.edit', $child->id) }}" class="btn btn-sm btn-outline-primary py-0 px-2 font-monospace me-1" style="font-size: 11.5px; height: 26px; line-height: 24px;" title="Edit {{ $child->title }}">
+                                                        <i class="bi bi-pencil"></i> Edit
+                                                    </a>
+                                                    @if($isChildProtected)
+                                                        <span class="badge bg-secondary-subtle text-secondary border font-monospace py-1 px-2" style="font-size: 11px; height: 26px; line-height: 18px; display: inline-flex; align-items: center;" title="Core system menu - cannot be hidden">
+                                                            <i class="bi bi-shield-lock text-primary me-1"></i> Core
+                                                        </span>
+                                                    @else
+                                                        <form action="{{ route('admin.menus.toggle-active', $child->id) }}" 
+                                                              method="POST" 
+                                                              class="d-inline toggle-menu-form"
+                                                              data-menu-id="{{ $child->id }}"
+                                                              data-is-parent="0"
+                                                              data-slug="{{ $child->slug }}">
+                                                            @csrf
+                                                            @method('PATCH')
+                                                            @if($isChildActive)
+                                                                <button type="submit" class="btn btn-sm btn-outline-warning py-0 px-2 font-monospace" style="font-size: 11.5px; height: 26px; line-height: 24px;" title="Hide this item">
+                                                                    <i class="bi bi-eye-slash"></i> Hide
+                                                                </button>
+                                                            @else
+                                                                <button type="submit" class="btn btn-sm btn-outline-success py-0 px-2 font-monospace" style="font-size: 11.5px; height: 26px; line-height: 24px;" title="Show this item">
+                                                                    <i class="bi bi-eye"></i> Show
+                                                                </button>
+                                                            @endif
+                                                        </form>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    @else
+                                        <!-- Top-Level Standalone Menu Row (e.g. Categories, Brands, Orders) -->
+                                        <tr class="standalone-menu-row {{ ! $isParentActive ? 'opacity-75 bg-light' : '' }}" id="parent-row-{{ $menu->slug }}">
+                                            <td onclick="event.stopPropagation();">
+                                                <form action="{{ route('admin.menus.sort', $menu->id) }}" method="POST" class="sort-menu-form" data-menu-id="{{ $menu->id }}">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <div class="sort-pill-box">
+                                                        <input type="number" 
+                                                               name="sort_order" 
+                                                               value="{{ $menu->sort_order }}" 
+                                                               min="0" 
+                                                               max="9999" 
+                                                               class="sort-pill-input" 
+                                                               title="Sort order for {{ $menu->title }}">
+                                                        <button type="submit" class="sort-pill-btn" title="Save sort order">
+                                                            <i class="bi bi-check2"></i>
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex align-items-center gap-3">
+                                                    <div class="menu-icon-box">
+                                                        <i class="bi {{ $menu->icon }}"></i>
+                                                    </div>
+                                                    <div>
+                                                        <strong class="text-dark d-block">{{ $menu->title }}</strong>
+                                                        <code class="route-pill mt-1">{{ $menu->route_name }}</code>
+                                                    </div>
                                                 </div>
+                                            </td>
+                                            <td>
+                                                @if($menu->view_permission)
+                                                    <span class="perm-badge">
+                                                        <i class="bi bi-key-fill"></i> {{ $menu->view_permission }}
+                                                    </span>
+                                                @else
+                                                    <span class="text-muted small font-monospace">Public</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                <div class="d-flex flex-wrap gap-1 align-items-center" style="max-width: 480px;">
+                                                    @forelse($menu->actions ?? [] as $action)
+                                                        @php
+                                                            $type = $action['action_type'] ?? '';
+                                                            $pillClass = match($type) {
+                                                                'view' => 'action-chip-view',
+                                                                'create' => 'action-chip-create',
+                                                                'edit' => 'action-chip-edit',
+                                                                'delete' => 'action-chip-delete',
+                                                                default => 'action-chip-view'
+                                                            };
+                                                            $iconClass = match($type) {
+                                                                'view' => 'bi-eye',
+                                                                'create' => 'bi-plus-circle',
+                                                                'edit' => 'bi-pencil',
+                                                                'delete' => 'bi-trash',
+                                                                default => 'bi-check'
+                                                            };
+                                                            $permName = $action['permission'] ?? '';
+                                                        @endphp
+                                                        <span class="action-chip {{ $pillClass }}" title="{{ $permName ? 'Permission: '.$permName : 'Public' }}">
+                                                            <i class="bi {{ $iconClass }}"></i>{{ $action['name'] }}
+                                                        </span>
+                                                    @empty
+                                                        <span class="text-muted small">—</span>
+                                                    @endforelse
+                                                </div>
+                                            </td>
+                                            <td id="status-cell-{{ $menu->id }}">
+                                                @if($isProtected)
+                                                    <span class="status-badge-active" title="Permanent core system component">
+                                                        <i class="bi bi-shield-check"></i> Permanent
+                                                    </span>
+                                                @elseif($isParentActive)
+                                                    <span class="status-badge-active">
+                                                        <i class="bi bi-check-circle-fill"></i> Active
+                                                    </span>
+                                                @else
+                                                    <span class="status-badge-hidden">
+                                                        <i class="bi bi-eye-slash"></i> Hidden (You)
+                                                    </span>
+                                                @endif
+                                            </td>
+                                            <td class="text-end" onclick="event.stopPropagation();">
+                                                <a href="{{ route('admin.menus.edit', $menu->id) }}" class="btn btn-sm btn-outline-primary py-0 px-2 font-monospace me-1" style="font-size: 11.5px; height: 26px; line-height: 24px;" title="Edit Menu Attributes & Order">
+                                                    <i class="bi bi-pencil"></i> Edit
+                                                </a>
+                                                @if($isProtected)
+                                                    <span class="badge bg-secondary-subtle text-secondary border font-monospace py-1 px-2" style="font-size: 11px; height: 26px; line-height: 18px; display: inline-flex; align-items: center;" title="Core system menu - cannot be hidden">
+                                                        <i class="bi bi-shield-lock text-primary me-1"></i> Core
+                                                    </span>
+                                                @else
+                                                    <form action="{{ route('admin.menus.toggle-active', $menu->id) }}" 
+                                                          method="POST" 
+                                                          class="d-inline toggle-menu-form"
+                                                          data-menu-id="{{ $menu->id }}"
+                                                          data-is-parent="0"
+                                                          data-slug="{{ $menu->slug }}">
+                                                        @csrf
+                                                        @method('PATCH')
+                                                        @if($isParentActive)
+                                                            <button type="submit" class="btn btn-sm btn-outline-warning py-0 px-2 font-monospace" style="font-size: 11.5px; height: 26px; line-height: 24px;" title="Hide this menu from navigation">
+                                                                <i class="bi bi-eye-slash"></i> Hide
+                                                            </button>
+                                                        @else
+                                                            <button type="submit" class="btn btn-sm btn-outline-success py-0 px-2 font-monospace" style="font-size: 11.5px; height: 26px; line-height: 24px;" title="Show this menu in navigation">
+                                                                <i class="bi bi-eye"></i> Show
+                                                            </button>
+                                                        @endif
+                                                    </form>
+                                                @endif
                                             </td>
                                         </tr>
                                     @endif
@@ -561,22 +793,6 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            // Listen for Bootstrap collapse events to update parent active state and rotate chevron
-            document.querySelectorAll('.collapse').forEach(function (collapseEl) {
-                const targetId = collapseEl.getAttribute('id');
-                if (!targetId || !targetId.startsWith('collapse-')) return;
-
-                const parentSlug = targetId.replace('collapse-', '');
-                const parentRow = document.getElementById('parent-row-' + parentSlug);
-
-                collapseEl.addEventListener('show.bs.collapse', function () {
-                    if (parentRow) parentRow.classList.add('is-open');
-                });
-
-                collapseEl.addEventListener('hide.bs.collapse', function () {
-                    if (parentRow) parentRow.classList.remove('is-open');
-                });
-            });
 
             // Asynchronous instant toggle for Show / Hide without page reload
             document.addEventListener('submit', function (e) {
@@ -627,18 +843,10 @@
                         // Update Status Badge for this menu item
                         const statusCell = document.getElementById('status-cell-' + menuId);
                         if (statusCell) {
-                            if (data.is_parent) {
-                                if (isActive) {
-                                    statusCell.innerHTML = '<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle-fill me-1"></i> Active</span>';
-                                } else {
-                                    statusCell.innerHTML = '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle"><i class="bi bi-eye-slash me-1"></i> Hidden (You)</span>';
-                                }
+                            if (isActive) {
+                                statusCell.innerHTML = '<span class="status-badge-active"><i class="bi bi-check-circle-fill"></i> Active</span>';
                             } else {
-                                if (isActive) {
-                                    statusCell.innerHTML = '<span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 10px;"><i class="bi bi-check-circle-fill me-1"></i> Active</span>';
-                                } else {
-                                    statusCell.innerHTML = '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle" style="font-size: 10px;"><i class="bi bi-eye-slash me-1"></i> Hidden (You)</span>';
-                                }
+                                statusCell.innerHTML = '<span class="status-badge-hidden"><i class="bi bi-eye-slash"></i> Hidden (You)</span>';
                             }
                         }
 
@@ -661,9 +869,9 @@
                                 const childStatusCell = document.getElementById('status-cell-' + childId);
                                 if (childStatusCell) {
                                     if (isActive) {
-                                        childStatusCell.innerHTML = '<span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 10px;"><i class="bi bi-check-circle-fill me-1"></i> Active</span>';
+                                        childStatusCell.innerHTML = '<span class="status-badge-active"><i class="bi bi-check-circle-fill"></i> Active</span>';
                                     } else {
-                                        childStatusCell.innerHTML = '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle" style="font-size: 10px;"><i class="bi bi-eye-slash me-1"></i> Hidden (Parent)</span>';
+                                        childStatusCell.innerHTML = '<span class="status-badge-hidden"><i class="bi bi-eye-slash"></i> Hidden (Parent)</span>';
                                     }
                                 }
                                 const cRow = document.getElementById('child-row-' + childId);
@@ -722,10 +930,10 @@
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        button.className = button.className.replace('btn-outline-primary', 'btn-success text-white');
-                        button.innerHTML = '<i class="bi bi-check-lg"></i>';
+                        button.classList.add('text-success');
+                        button.innerHTML = '<i class="bi bi-check-lg text-success"></i>';
                         setTimeout(() => {
-                            button.className = button.className.replace('btn-success text-white', 'btn-outline-primary');
+                            button.classList.remove('text-success');
                             button.innerHTML = '<i class="bi bi-check2"></i>';
                             button.disabled = false;
                         }, 1200);

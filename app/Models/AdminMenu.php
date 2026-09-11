@@ -134,11 +134,30 @@ class AdminMenu extends Model
         Cache::forget('admin_menus_all_map');
     }
 
+    public const PROTECTED_SLUGS = ['dashboard', 'settings', 'menu_setup', 'menus'];
+
+    /**
+     * Determine if a menu item is a protected core system component that cannot be hidden.
+     */
+    public static function isProtected(int|string|self $menu): bool
+    {
+        $slug = $menu instanceof self ? $menu->slug : (is_string($menu) ? $menu : null);
+        if ($slug === null && is_numeric($menu)) {
+            $slug = static::where('id', $menu)->value('slug');
+        }
+
+        return in_array($slug, self::PROTECTED_SLUGS, true);
+    }
+
     /**
      * Check if a menu is active for the current user's session.
      */
     public static function isMenuActiveForSession(int|string|self $menu): bool
     {
+        if (static::isProtected($menu)) {
+            return true;
+        }
+
         $id = $menu instanceof self ? $menu->id : (is_numeric($menu) ? (int) $menu : null);
         $slug = $menu instanceof self ? $menu->slug : (is_string($menu) ? $menu : null);
 
@@ -219,6 +238,12 @@ class AdminMenu extends Model
             $modules[] = ['title' => $prodParent->title, 'menus' => collect([$prodParent])->merge($children)];
         }
 
+        // Manage Stock (Stock Overview, Serial Registry, Adjustments, Transfers)
+        if ($stockParent = $parentMenus->firstWhere('slug', 'stock')) {
+            $children = $allMenus->filter(fn ($m) => $m->parent_slug === 'stock');
+            $modules[] = ['title' => $stockParent->title, 'menus' => collect([$stockParent])->merge($children)];
+        }
+
         // 3. Categories
         if ($cat = $standaloneMenus->firstWhere('slug', 'categories')) {
             $modules[] = ['title' => $cat->title, 'menus' => collect([$cat])];
@@ -227,6 +252,11 @@ class AdminMenu extends Model
         // 4. Brands
         if ($brand = $standaloneMenus->firstWhere('slug', 'brands')) {
             $modules[] = ['title' => $brand->title, 'menus' => collect([$brand])];
+        }
+
+        // Makes
+        if ($make = $standaloneMenus->firstWhere('slug', 'makes')) {
+            $modules[] = ['title' => $make->title, 'menus' => collect([$make])];
         }
 
         // 5. Manage Warehouses (Consolidate All Warehouses, Add Warehouse)
@@ -240,9 +270,10 @@ class AdminMenu extends Model
             $modules[] = ['title' => $orders->title, 'menus' => collect([$orders])];
         }
 
-        // 7. Customers
+        // 7. Customers & B2B Groups
         if ($cust = $standaloneMenus->firstWhere('slug', 'customers')) {
-            $modules[] = ['title' => 'Customers', 'menus' => collect([$cust])];
+            $custGroup = $standaloneMenus->firstWhere('slug', 'customer_groups');
+            $modules[] = ['title' => 'Customers', 'menus' => collect([$cust, $custGroup])->filter()];
         }
 
         // 8. Suppliers
@@ -260,7 +291,12 @@ class AdminMenu extends Model
             $modules[] = ['title' => 'Roles', 'menus' => collect([$roles])];
         }
 
-        // 11. Menu Setup
+        // 11. System Permissions
+        if ($perms = $settingsChildren->firstWhere('slug', 'permissions')) {
+            $modules[] = ['title' => 'System Permissions', 'menus' => collect([$perms])];
+        }
+
+        // 12. Menu Setup
         if ($menuSetup = $settingsChildren->firstWhere('slug', 'menu_setup')) {
             $modules[] = ['title' => 'Menu Setup', 'menus' => collect([$menuSetup])];
         }
@@ -355,20 +391,37 @@ class AdminMenu extends Model
             'delete warehouses' => 'admin.warehouses.destroy',
             'view orders' => 'admin.orders.index',
             'edit orders' => 'admin.orders.status',
+            'delete orders' => 'admin.orders.index',
             'view customers' => 'admin.customers.index',
+            'create customers' => 'admin.customers.index',
             'edit customers' => 'admin.customers.toggle-special',
+            'delete customers' => 'admin.customers.index',
+            'view customer groups' => 'admin.customer-groups.index',
+            'create customer groups' => 'admin.customer-groups.create',
+            'edit customer groups' => 'admin.customer-groups.edit',
+            'delete customer groups' => 'admin.customer-groups.destroy',
             'view suppliers' => 'admin.suppliers.index',
             'create suppliers' => 'admin.suppliers.create',
             'edit suppliers' => 'admin.suppliers.edit',
             'delete suppliers' => 'admin.suppliers.destroy',
+            'manage suppliers' => 'admin.suppliers.index',
             'view users' => 'admin.users.index',
             'edit users' => 'admin.users.edit',
             'approve users' => 'admin.users.toggle-approval',
             'delete users' => 'admin.users.destroy',
+            'manage users' => 'admin.users.index',
             'view roles' => 'admin.roles.index',
             'create roles' => 'admin.roles.create',
             'edit roles' => 'admin.roles.edit',
             'delete roles' => 'admin.roles.destroy',
+            'manage roles' => 'admin.roles.index',
+            'view permissions' => 'admin.permissions.index',
+            'create permissions' => 'admin.permissions.create',
+            'manage permissions' => 'admin.permissions.index',
+            'view stock' => 'admin.stock.index',
+            'create stock' => 'admin.stock.adjustments.create',
+            'edit stock' => 'admin.stock.index',
+            'delete stock' => 'admin.stock.adjustments.index',
             'view menus' => 'admin.menus.index',
             'edit menus' => 'admin.menus.edit',
             'view settings' => 'admin.menus.index',
@@ -430,6 +483,10 @@ class AdminMenu extends Model
 
         $disabledMenuIds = session('admin_disabled_menus', []);
         $activeMenus = static::active()->ordered()->get()->reject(function ($m) use ($disabledMenuIds) {
+            if (static::isProtected($m)) {
+                return false;
+            }
+
             return in_array($m->id, $disabledMenuIds, true) || in_array($m->slug, $disabledMenuIds, true);
         });
         $childrenByParent = $activeMenus->whereNotNull('parent_slug')->where('parent_slug', '!=', '')->groupBy('parent_slug');

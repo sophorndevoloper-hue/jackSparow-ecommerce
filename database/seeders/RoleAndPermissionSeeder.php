@@ -22,63 +22,40 @@ class RoleAndPermissionSeeder extends Seeder
         // Reset cached roles and permissions
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // 1. Define all permissions for the e-commerce store
-        $permissions = [
-            // Admin Access & Dashboard
-            'view dashboard',
+        // 1. Dynamically extract all backend permissions from backend_menus.json
+        $menuDefs = BackendMenuSeeder::getSystemMenuDefinitions();
+        $permissions = [];
 
-            // Hardware Products
-            'view products',
-            'create products',
-            'edit products',
-            'delete products',
+        foreach ($menuDefs as $def) {
+            if (! empty($def['view_permission'])) {
+                foreach (explode('|', $def['view_permission']) as $p) {
+                    $pName = trim($p);
+                    if ($pName !== '') {
+                        $permissions[] = $pName;
+                    }
+                }
+            }
+            if (! empty($def['actions'])) {
+                foreach ($def['actions'] as $act) {
+                    if (! empty($act['permission'])) {
+                        foreach (explode('|', $act['permission']) as $p) {
+                            $pName = trim($p);
+                            if ($pName !== '') {
+                                $permissions[] = $pName;
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
-            // Hardware Categories
-            'view categories',
-            'create categories',
-            'edit categories',
-            'delete categories',
+        // Dedicated stock permissions
+        $permissions[] = 'view stock';
+        $permissions[] = 'create stock';
+        $permissions[] = 'edit stock';
+        $permissions[] = 'delete stock';
 
-            // Brands / Manufacturers
-            'view brands',
-            'create brands',
-            'edit brands',
-            'delete brands',
-
-            // Customer Orders
-            'view orders',
-            'edit orders',
-
-            // Customers
-            'view customers',
-            'edit customers',
-
-            // Suppliers
-            'view suppliers',
-            'create suppliers',
-            'edit suppliers',
-            'delete suppliers',
-
-            // Warehouses
-            'view warehouses',
-            'create warehouses',
-            'edit warehouses',
-            'delete warehouses',
-
-            // Users, Roles & Access
-            'view users',
-            'edit users',
-            'approve users',
-            'delete users',
-            'view roles',
-            'create roles',
-            'edit roles',
-            'delete roles',
-
-            // Menu Setup
-            'view menus',
-            'edit menus',
-        ];
+        $permissions = array_values(array_unique(array_filter($permissions)));
 
         // Clean up legacy 'web' guard roles & permissions
         Role::where('guard_name', 'web')->delete();

@@ -27,7 +27,7 @@ class BackendMenuController extends Controller
         $disabledMenuIds = session('admin_disabled_menus', []);
 
         foreach ($menus as $menu) {
-            $menu->is_active_for_session = ! in_array($menu->id, $disabledMenuIds, true) && ! in_array($menu->slug, $disabledMenuIds, true);
+            $menu->is_active_for_session = AdminMenu::isMenuActiveForSession($menu);
         }
 
         $groupedMenus = $menus->groupBy('section');
@@ -54,6 +54,16 @@ class BackendMenuController extends Controller
             'roles',
             'availablePermissions',
         ));
+    }
+
+    /**
+     * Restore visibility for all menus for the current user session.
+     */
+    public function resetVisibility(): RedirectResponse
+    {
+        session()->forget('admin_disabled_menus');
+
+        return back()->with('success', 'All hidden menus have been restored and are now visible in your navigation.');
     }
 
     /**
@@ -92,15 +102,28 @@ class BackendMenuController extends Controller
 
     /**
      * Toggle the active/inactive status of a menu item for the current user session.
-     * When toggling a parent menu, all child menus are also automatically toggled.
+     * Protected core system menus (Dashboard, Settings, Menu Setup) cannot be hidden.
+     * When toggling a parent menu, all non-protected child menus are also automatically toggled.
      */
     public function toggleActive(Request $request, AdminMenu $menu): RedirectResponse|JsonResponse
     {
+        if (AdminMenu::isProtected($menu)) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "The '{$menu->title}' menu is a core system component and cannot be hidden.",
+                ], 422);
+            }
+
+            return back()->with('error', "The '{$menu->title}' menu is a core system component and cannot be hidden.");
+        }
+
         $disabled = session('admin_disabled_menus', []);
 
-        // Find any child menus belonging to this menu if it is a parent
-        $childIds = AdminMenu::where('parent_slug', $menu->slug)->pluck('id')->toArray();
-        $childSlugs = AdminMenu::where('parent_slug', $menu->slug)->pluck('slug')->toArray();
+        // Find non-protected child menus belonging to this menu if it is a parent
+        $childMenus = AdminMenu::where('parent_slug', $menu->slug)->get();
+        $childIds = $childMenus->reject(fn ($c) => AdminMenu::isProtected($c))->pluck('id')->toArray();
+        $childSlugs = $childMenus->reject(fn ($c) => AdminMenu::isProtected($c))->pluck('slug')->toArray();
         $allTargetIds = array_merge([$menu->id], $childIds);
         $allTargetSlugs = array_merge([$menu->slug], $childSlugs);
 

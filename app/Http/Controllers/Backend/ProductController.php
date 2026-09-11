@@ -12,7 +12,9 @@ use App\Models\CustomerGroup;
 use App\Models\Make;
 use App\Models\Product;
 use App\Models\ProductPriceTier;
+use App\Models\SerialNumber;
 use App\Models\Warehouse;
+use App\Services\SerialImportService;
 use App\Services\SerialTrackingService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -24,7 +26,8 @@ use Illuminate\Support\Facades\Storage;
 class ProductController extends Controller
 {
     public function __construct(
-        protected SerialTrackingService $serialTrackingService
+        protected SerialTrackingService $serialTrackingService,
+        protected SerialImportService $serialImportService
     ) {}
 
     /**
@@ -169,6 +172,8 @@ class ProductController extends Controller
      */
     public function edit(Product $product): View
     {
+        $product->syncTotalStock();
+
         $product->load(['images', 'priceTiers.customerGroup', 'warehouses', 'serialNumbers' => function ($q) {
             $q->latest()->limit(50);
         }, 'compatibilities.compatibleProduct']);
@@ -180,7 +185,20 @@ class ProductController extends Controller
         $warehouses = Warehouse::where('is_active', true)->orderBy('name')->get();
         $allProducts = Product::where('id', '!=', $product->id)->orderBy('name')->get(['id', 'name', 'sku', 'socket']);
 
-        return view('backend.products.edit', compact('product', 'categories', 'brands', 'makes', 'customerGroups', 'warehouses', 'allProducts'));
+        $totalSerialsCount = $product->serialNumbers()->count();
+        $inStockSerialsCount = $product->serialNumbers()->where('status', SerialNumber::STATUS_IN_STOCK)->count();
+
+        return view('backend.products.edit', compact(
+            'product',
+            'categories',
+            'brands',
+            'makes',
+            'customerGroups',
+            'warehouses',
+            'allProducts',
+            'totalSerialsCount',
+            'inStockSerialsCount'
+        ));
     }
 
     /**
@@ -211,22 +229,17 @@ class ProductController extends Controller
         $data['specifications'] = $specifications;
         $data['specs'] = $specifications;
 
-        $serialCount = $product->serialNumbers()->count();
+        $hasSerials = $product->serialNumbers()->exists();
         $isSerialTracked = $product->requires_serial_tracking
             || $request->boolean('requires_serial_tracking')
-            || $serialCount > 0;
+            || $hasSerials;
 
-        if ($isSerialTracked && $serialCount > 0 && ! $request->boolean('allow_stock_mismatch')) {
-            $inputStock = (int) ($data['stock_quantity'] ?? 0);
-            if ($inputStock !== $serialCount) {
-                $comparison = $inputStock > $serialCount ? 'more than' : 'less than';
-                $errorMessage = "Total stock quantity ({$inputStock}) is {$comparison} tracked serial numbers ({$serialCount}). Please adjust total stock quantity to {$serialCount} or register matching serial numbers.";
-
-                return redirect()
-                    ->to(route('admin.products.edit', $product->id).'#inventory')
-                    ->withInput()
-                    ->with('error', $errorMessage);
-            }
+        if ($isSerialTracked) {
+            // Only serial numbers with status 'IN_STOCK' are counted towards stock quantity.
+            // Units that are SHIPPED (sold), DEFECTIVE_SCRAP, RETURNED_RMA, or OTHER do not add to stock quantity.
+            $data['stock_quantity'] = $product->serialNumbers()
+                ->where('status', SerialNumber::STATUS_IN_STOCK)
+                ->count();
         }
 
         return DB::transaction(function () use ($data, $request, $product) {
@@ -287,33 +300,69 @@ class ProductController extends Controller
     }
 
     /**
-     * Ingest batch serial numbers directly from product edit page.
+     * Ingest batch serial numbers directly from product edit page (via text or file upload).
      */
     public function storeSerials(Request $request, Product $product): JsonResponse|RedirectResponse
     {
         $validated = $request->validate([
             'warehouse_id' => ['required', 'exists:warehouses,id'],
-            'serials_text' => ['required', 'string'],
+            'serials_text' => ['nullable', 'string'],
+            'file' => ['nullable', 'file', 'max:10240'],
             'cost_price' => ['nullable', 'numeric', 'min:0'],
         ]);
+
+        if (empty($validated['serials_text']) && ! $request->hasFile('file')) {
+            $msg = 'Please enter serial numbers or upload a file (CSV, Excel, JSON, TXT).';
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => $msg,
+                    'errors' => [
+                        'serials_text' => [$msg],
+                    ],
+                ], 422);
+            }
+
+            return redirect()
+                ->to(route('admin.products.edit', $product->id).'#inventory')
+                ->withInput()
+                ->withErrors(['serials_text' => $msg]);
+        }
 
         $warehouse = Warehouse::findOrFail($validated['warehouse_id']);
         $cost = ! empty($validated['cost_price']) ? (float) $validated['cost_price'] : (float) $product->cost_price;
 
         try {
-            $created = $this->serialTrackingService->ingestSerials(
-                $product,
-                $warehouse,
-                $validated['serials_text'],
-                $cost
-            );
+            if ($request->filled('serials_text')) {
+                $created = $this->serialTrackingService->ingestSerials(
+                    $product,
+                    $warehouse,
+                    $validated['serials_text'],
+                    $cost
+                );
+            } elseif ($request->hasFile('file')) {
+                $items = $this->serialImportService->parseFile($request->file('file'));
+                $created = $this->serialImportService->importItems(
+                    $items,
+                    $product->id,
+                    $warehouse->id,
+                    $cost
+                );
+            } else {
+                throw new \InvalidArgumentException('Please enter serial numbers or upload a file.');
+            }
 
             if ($request->expectsJson()) {
+                $fresh = $product->fresh();
+                $totalSerials = $fresh->serialNumbers()->count();
+                $inStockSerials = $fresh->serialNumbers()->where('status', SerialNumber::STATUS_IN_STOCK)->count();
+
                 return response()->json([
                     'success' => true,
                     'message' => "Successfully registered {$created->count()} serial numbers into {$warehouse->name}.",
                     'count' => $created->count(),
-                    'total_count' => $product->fresh()->serialNumbers()->count(),
+                    'total_count' => $totalSerials,
+                    'in_stock_count' => $inStockSerials,
                     'serials' => $created->map(fn ($sn) => [
                         'id' => $sn->id,
                         'serial_number' => $sn->serial_number,

@@ -8,8 +8,7 @@
         <form method="POST" action="{{ route('admin.register') }}" class="needs-validation">
             @csrf
             <div class="mb-4">
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace mb-2">guard: backend &bull; table: users</span>
-                <h1 class="h3 mb-1">Create Admin Account</h1>
+                <h1 class="h3 mb-1">Create Account</h1>
                 <p class="text-muted mb-0">Sign in to your admin workspace. New accounts require superadmin approval before access.</p>
             </div>
 
@@ -30,7 +29,7 @@
 
             <div class="mb-3">
                 <label class="form-label small fw-bold" for="email">Admin Email Address</label>
-                <input id="email" class="form-control" type="email" name="email" value="{{ old('email') }}" required autocomplete="username" placeholder="admin@ecommerce.test">
+                <input id="email" class="form-control" type="email" name="email" value="{{ old('email') }}" required autocomplete="username" placeholder="email@example.com">
             </div>
 
             <div class="mb-3">
@@ -49,7 +48,7 @@
         </form>
 
         <div class="auth-footer text-center mt-3">
-            <a href="{{ route('admin.login') }}" class="text-muted small">Already have an admin account? Sign In</a>
+            <a href="{{ route('admin.login') }}" class="text-muted small">Already have an account? Sign In</a>
         </div>
     </section>
 </x-guest-layout>

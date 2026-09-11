@@ -97,6 +97,9 @@ class CheckBackendPermission
         if (str_starts_with($routeName, 'admin.brands.')) {
             return 'brands';
         }
+        if (str_starts_with($routeName, 'admin.makes.')) {
+            return 'makes';
+        }
         if (str_starts_with($routeName, 'admin.stock.adjustments.') || str_starts_with($routeName, 'admin.stock.transfers.') || str_starts_with($routeName, 'admin.stock.') || str_starts_with($routeName, 'admin.serial-numbers.')) {
             return 'stock';
         }
@@ -105,6 +108,9 @@ class CheckBackendPermission
         }
         if (str_starts_with($routeName, 'admin.orders.')) {
             return 'orders';
+        }
+        if (str_starts_with($routeName, 'admin.customer-groups.')) {
+            return 'customer_groups';
         }
         if (str_starts_with($routeName, 'admin.customers.')) {
             return 'customers';
@@ -119,16 +125,16 @@ class CheckBackendPermission
             return 'roles';
         }
         if (str_starts_with($routeName, 'admin.permissions.')) {
-            return 'roles';
+            return 'permissions';
         }
         if (str_starts_with($routeName, 'admin.menus.')) {
-            return 'menus';
+            return 'menu_setup';
         }
         if (str_starts_with($routeName, 'admin.activity-logs.')) {
             return 'activity-logs';
         }
         if (str_starts_with($routeName, 'admin.cache.')) {
-            return 'clear-cache';
+            return null;
         }
 
         return null;
@@ -145,8 +151,13 @@ class CheckBackendPermission
             return [];
         }
 
-        // Dashboard, Profile & Clear Cache (no permission required for authenticated admin users)
-        if ($routeName === 'admin.dashboard' || str_starts_with($routeName, 'admin.profile.') || str_starts_with($routeName, 'admin.cache.')) {
+        // Dashboard & Profile (no permission required for authenticated admin users)
+        if ($routeName === 'admin.dashboard' || str_starts_with($routeName, 'admin.profile.')) {
+            return [];
+        }
+
+        // System Maintenance / Clear Cache (no permission required for authenticated admin users)
+        if (str_starts_with($routeName, 'admin.cache.')) {
             return [];
         }
 
@@ -224,31 +235,34 @@ class CheckBackendPermission
         // Stock
         if (str_starts_with($routeName, 'admin.stock.')) {
             if (str_contains($routeName, 'destroy')) {
-                return ['delete products'];
+                return ['delete stock', 'delete products'];
             }
             if (str_contains($routeName, 'create') || str_contains($routeName, 'store')) {
-                return ['create products', 'edit products'];
+                return ['create stock', 'create products', 'edit stock', 'edit products'];
             }
             if (str_contains($routeName, 'edit') || str_contains($routeName, 'update') || str_contains($routeName, 'status')) {
-                return ['edit products'];
+                return ['edit stock', 'edit products'];
             }
 
-            return ['view products', 'edit products'];
+            return ['view stock', 'view products', 'edit stock', 'edit products'];
         }
 
         // Serial Numbers
         if (str_starts_with($routeName, 'admin.serial-numbers.')) {
             if ($routeName === 'admin.serial-numbers.destroy') {
-                return ['delete products', 'edit products'];
+                return ['delete stock', 'delete products', 'edit stock', 'edit products'];
             }
-            if ($routeName === 'admin.serial-numbers.store') {
-                return ['create products', 'edit products'];
+            if (in_array($routeName, ['admin.serial-numbers.store', 'admin.serial-numbers.import'])) {
+                return ['create stock', 'create products', 'edit stock', 'edit products'];
             }
             if ($routeName === 'admin.serial-numbers.update') {
-                return ['edit products'];
+                return ['edit stock', 'edit products'];
+            }
+            if ($routeName === 'admin.serial-numbers.templates.download') {
+                return ['view stock', 'view products', 'create stock', 'create products', 'edit stock', 'edit products'];
             }
 
-            return ['view products', 'edit products'];
+            return ['view stock', 'view products', 'edit stock', 'edit products'];
         }
 
         // Orders
@@ -259,6 +273,21 @@ class CheckBackendPermission
             return ['edit orders'];
         }
 
+        // Customer Groups
+        if (str_starts_with($routeName, 'admin.customer-groups.')) {
+            if ($routeName === 'admin.customer-groups.destroy') {
+                return ['delete customer groups', 'delete customers'];
+            }
+            if (in_array($routeName, ['admin.customer-groups.create', 'admin.customer-groups.store'])) {
+                return ['create customer groups', 'create customers'];
+            }
+            if (in_array($routeName, ['admin.customer-groups.edit', 'admin.customer-groups.update'])) {
+                return ['edit customer groups', 'edit customers'];
+            }
+
+            return ['view customer groups', 'view customers'];
+        }
+
         // Customers
         if (str_starts_with($routeName, 'admin.customers.')) {
             return ['view customers', 'edit customers'];
@@ -267,45 +296,45 @@ class CheckBackendPermission
         // Suppliers
         if (str_starts_with($routeName, 'admin.suppliers.')) {
             if ($routeName === 'admin.suppliers.destroy') {
-                return ['delete suppliers'];
+                return ['delete suppliers', 'manage suppliers'];
             }
             if (in_array($routeName, ['admin.suppliers.create', 'admin.suppliers.store'])) {
-                return ['create suppliers'];
+                return ['create suppliers', 'manage suppliers'];
             }
             if (in_array($routeName, ['admin.suppliers.edit', 'admin.suppliers.update'])) {
-                return ['edit suppliers'];
+                return ['edit suppliers', 'manage suppliers'];
             }
 
-            return ['view suppliers', 'create suppliers', 'edit suppliers', 'delete suppliers'];
+            return ['view suppliers', 'create suppliers', 'edit suppliers', 'delete suppliers', 'manage suppliers'];
         }
 
         // Users
         if ($routeName === 'admin.users.toggle-approval') {
-            return ['approve users', 'edit users'];
+            return ['approve users', 'edit users', 'manage users'];
         }
         if ($routeName === 'admin.users.destroy') {
-            return ['delete users'];
+            return ['delete users', 'manage users'];
         }
         if (in_array($routeName, ['admin.users.edit', 'admin.users.update'])) {
-            return ['edit users'];
+            return ['edit users', 'manage users'];
         }
         if (in_array($routeName, ['admin.users.index', 'admin.users.show'])) {
-            return ['view users', 'edit users', 'approve users', 'delete users'];
+            return ['view users', 'edit users', 'approve users', 'delete users', 'manage users'];
         }
 
-        // Roles & Access Control
+        // Roles & Permissions Access Control
         if (str_starts_with($routeName, 'admin.roles.') || str_starts_with($routeName, 'admin.permissions.')) {
-            if ($routeName === 'admin.roles.destroy') {
-                return ['delete roles'];
+            if (in_array($routeName, ['admin.roles.destroy', 'admin.permissions.destroy'])) {
+                return ['delete roles', 'delete permissions', 'manage roles', 'manage permissions'];
             }
-            if (in_array($routeName, ['admin.roles.create', 'admin.roles.store'])) {
-                return ['create roles'];
+            if (in_array($routeName, ['admin.roles.create', 'admin.roles.store', 'admin.permissions.create', 'admin.permissions.store'])) {
+                return ['create roles', 'create permissions', 'manage roles', 'manage permissions'];
             }
             if (in_array($routeName, ['admin.roles.edit', 'admin.roles.update'])) {
-                return ['edit roles'];
+                return ['edit roles', 'manage roles'];
             }
 
-            return ['view roles', 'create roles', 'edit roles', 'delete roles'];
+            return ['view roles', 'view permissions', 'create roles', 'edit roles', 'delete roles', 'manage roles', 'manage permissions'];
         }
 
         // Menu Setup & System Access

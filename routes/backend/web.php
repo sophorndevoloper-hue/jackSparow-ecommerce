@@ -10,6 +10,8 @@ use App\Http\Controllers\Backend\CustomerGroupController;
 use App\Http\Controllers\Backend\DashboardController;
 use App\Http\Controllers\Backend\MakeController;
 use App\Http\Controllers\Backend\OrderController;
+use App\Http\Controllers\Backend\PermissionController;
+use App\Http\Controllers\Backend\ProductCollectionController;
 use App\Http\Controllers\Backend\ProductController;
 use App\Http\Controllers\Backend\ProductImageController;
 use App\Http\Controllers\Backend\ProfileController as BackendProfileController;
@@ -62,21 +64,25 @@ Route::prefix('admin')->middleware(['auth:backend', 'admin.permission'])->as('ad
     Route::delete('products/images/{image}', [ProductImageController::class, 'destroy'])->name('products.images.destroy');
 
     // 3. Stock Management & Serials
+    Route::get('stock/adjustments/product-serials', [StockAdjustmentController::class, 'getProductSerials'])->name('stock.adjustments.product-serials');
     Route::resource('stock/adjustments', StockAdjustmentController::class)->names('stock.adjustments');
+    Route::get('stock/transfers/product-serials', [StockTransferController::class, 'getProductSerials'])->name('stock.transfers.product-serials');
     Route::resource('stock/transfers', StockTransferController::class)->names('stock.transfers');
     Route::patch('stock/transfers/{transfer}/status', [StockTransferController::class, 'updateStatus'])->name('stock.transfers.status');
     Route::get('stock', [StockController::class, 'index'])->name('stock.index');
     Route::post('stock/{product}', [StockController::class, 'update'])->name('stock.update');
     Route::post('products/{product}/serials', [ProductController::class, 'storeSerials'])->name('products.serials.store');
     Route::post('serial-numbers/import', [SerialNumberController::class, 'import'])->name('serial-numbers.import');
+    Route::post('serial-numbers/parse-preview', [SerialNumberController::class, 'parsePreview'])->name('serial-numbers.parse-preview');
     Route::get('serial-numbers/templates/{format}', [SerialNumberController::class, 'downloadTemplate'])->name('serial-numbers.templates.download');
     Route::resource('serial-numbers', SerialNumberController::class)->only(['index', 'store', 'update', 'destroy']);
 
     // 4. Warehouses
     Route::resource('warehouses', WarehouseController::class);
 
-    // 5. Hardware Catalog (Products, Categories, Brands, Makes)
+    // 5. Hardware Catalog (Products, Categories, Brands, Makes, Collections)
     Route::resource('products', ProductController::class);
+    Route::resource('collections', ProductCollectionController::class);
     Route::resource('categories', CategoryController::class);
     Route::resource('brands', BrandController::class);
     Route::resource('makes', MakeController::class);
@@ -96,10 +102,12 @@ Route::prefix('admin')->middleware(['auth:backend', 'admin.permission'])->as('ad
     Route::patch('users/{user}/toggle-approval', [UserController::class, 'toggleApproval'])->name('users.toggle-approval');
     Route::resource('users', UserController::class)->except(['create', 'store']);
     Route::resource('roles', RoleController::class);
+    Route::resource('permissions', PermissionController::class)->only(['index', 'create', 'store']);
 
     // 9. Menu Setup
     Route::get('menus', [BackendMenuController::class, 'index'])->name('menus.index');
     Route::post('menus/sync', [BackendMenuController::class, 'sync'])->name('menus.sync');
+    Route::post('menus/reset-visibility', [BackendMenuController::class, 'resetVisibility'])->name('menus.reset-visibility');
     Route::get('menus/{menu}/edit', [BackendMenuController::class, 'edit'])->name('menus.edit');
     Route::put('menus/{menu}', [BackendMenuController::class, 'update'])->name('menus.update');
     Route::patch('menus/{menu}/sort', [BackendMenuController::class, 'updateSort'])->name('menus.sort');

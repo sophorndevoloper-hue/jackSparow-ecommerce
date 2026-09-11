@@ -129,3 +129,55 @@ it('allows admin to quickly update menu sort order via dedicated sort endpoint',
     $menu->refresh();
     expect($menu->sort_order)->toBe(5);
 });
+
+it('disallows hiding core protected menus like menu_setup and settings', function () {
+    $admin = User::factory()->create(['is_approved' => true]);
+    $admin->assignRole(Role::findByName('admin', 'backend'));
+
+    $menuSetup = AdminMenu::where('slug', 'menu_setup')->first();
+    $settings = AdminMenu::where('slug', 'settings')->first();
+
+    // Try hiding Menu Setup via JSON
+    $response = $this->actingAs($admin, 'backend')
+        ->patchJson(route('admin.menus.toggle-active', $menuSetup->id));
+
+    $response->assertStatus(422);
+    $response->assertJson([
+        'success' => false,
+    ]);
+
+    // Try hiding Settings via regular form request
+    $formResponse = $this->actingAs($admin, 'backend')
+        ->patch(route('admin.menus.toggle-active', $settings->id));
+
+    $formResponse->assertSessionHas('error');
+
+    // Verify Menu Setup is STILL visible in sidebar
+    $dashboard = $this->actingAs($admin, 'backend')->get(route('admin.dashboard'));
+    $dashboard->assertSee('Menu Setup');
+});
+
+it('allows restoring all hidden menus via reset-visibility endpoint', function () {
+    $admin = User::factory()->create(['is_approved' => true]);
+    $admin->assignRole(Role::findByName('admin', 'backend'));
+
+    $categories = AdminMenu::where('slug', 'categories')->first();
+
+    // Hide categories
+    $this->actingAs($admin, 'backend')
+        ->patch(route('admin.menus.toggle-active', $categories->id));
+
+    $dashboardBefore = $this->actingAs($admin, 'backend')->get(route('admin.dashboard'));
+    $dashboardBefore->assertDontSee('href="'.route('admin.categories.index').'"', false);
+
+    // Call reset-visibility
+    $resetResponse = $this->actingAs($admin, 'backend')
+        ->post(route('admin.menus.reset-visibility'));
+
+    $resetResponse->assertRedirect();
+    $resetResponse->assertSessionHas('success');
+
+    // Verify categories is visible again
+    $dashboardAfter = $this->actingAs($admin, 'backend')->get(route('admin.dashboard'));
+    $dashboardAfter->assertSee('href="'.route('admin.categories.index').'"', false);
+});

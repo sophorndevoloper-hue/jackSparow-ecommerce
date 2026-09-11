@@ -32,38 +32,27 @@
                                href="#menu-collapse-{{ $item['slug'] }}" 
                                role="button" 
                                aria-expanded="{{ $item['is_active'] ? 'true' : 'false' }}">
-                                <div class="d-flex align-items-center gap-2">
+                                <div class="d-flex align-items-center gap-2 overflow-hidden">
                                     <span class="nav-icon"><i class="bi {{ $item['icon'] }}" aria-hidden="true"></i></span>
-                                    <span class="nav-text">{{ $item['title'] }}</span>
+                                    <span class="nav-text text-truncate">{{ $item['title'] }}</span>
                                 </div>
-                                <i class="bi bi-chevron-down small"></i>
+                                <i class="bi bi-chevron-down chevron-icon ms-1"></i>
                             </a>
-                            <div class="collapse {{ $item['is_active'] ? 'show' : '' }} ps-3 mt-1" id="menu-collapse-{{ $item['slug'] }}">
+                            <div class="collapse {{ $item['is_active'] ? 'show' : '' }} sidebar-submenu mt-1" id="menu-collapse-{{ $item['slug'] }}">
                                 @foreach($item['sub_items'] as $sub)
-                                    <a class="nav-link py-2 {{ $sub['is_active'] ? 'active' : '' }}" href="{{ $sub['url'] }}">
-                                        <span class="nav-icon" style="width: 24px; height: 24px;"><i class="bi {{ $sub['icon'] }}" style="font-size: 12px;"></i></span>
-                                        <span class="nav-text small">{{ $sub['title'] }}</span>
+                                    <a class="nav-link submenu-link {{ $sub['is_active'] ? 'active' : '' }}" href="{{ $sub['url'] }}">
+                                        <span class="nav-icon submenu-icon"><i class="bi {{ $sub['icon'] }}"></i></span>
+                                        <span class="nav-text text-truncate">{{ $sub['title'] }}</span>
                                     </a>
                                 @endforeach
                             </div>
                         </div>
                     @else
                         {{-- Single Menu Link (Target from Menu Setup) --}}
-                        @if($item['slug'] === 'clear-cache')
-                            <div class="px-2 pt-2">
-                                <form action="{{ $item['url'] }}" method="POST">
-                                    @csrf
-                                    <button type="submit" class="btn btn-outline-warning btn-sm w-100 py-1 d-flex align-items-center justify-content-center gap-1" style="font-size: 11px;">
-                                        <i class="bi {{ $item['icon'] }}"></i> {{ $item['title'] }}
-                                    </button>
-                                </form>
-                            </div>
-                        @else
-                            <a class="nav-link {{ $item['is_active'] ? 'active' : '' }}" href="{{ $item['url'] }}">
-                                <span class="nav-icon"><i class="bi {{ $item['icon'] }}" aria-hidden="true"></i></span>
-                                <span class="nav-text">{{ $item['title'] }}</span>
-                            </a>
-                        @endif
+                        <a class="nav-link {{ $item['is_active'] ? 'active' : '' }}" href="{{ $item['url'] }}">
+                            <span class="nav-icon"><i class="bi {{ $item['icon'] }}" aria-hidden="true"></i></span>
+                            <span class="nav-text text-truncate">{{ $item['title'] }}</span>
+                        </a>
                     @endif
                 @endforeach
             @endif
@@ -106,8 +95,15 @@
         </a>
     </div>
 
-    <div class="sidebar-footer">
-        <span class="status-dot"></span>
-        <span class="sidebar-footer-text">Hardware DB Online</span>
+    <div class="sidebar-footer d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center">
+            <span class="status-dot"></span>
+            <span class="sidebar-footer-text">Hardware DB Online</span>
+        </div>
+        @if(\App\Models\AdminMenu::userHasPermission($adminUser, 'view menus|view settings') || $adminUser?->hasRole('superadmin', 'backend') || $adminUser?->hasRole('admin', 'backend'))
+            <a href="{{ route('admin.menus.index') }}" class="text-secondary text-hover-primary text-decoration-none" title="Menu & Navigation Setup">
+                <i class="bi bi-sliders" style="font-size: 13px;"></i>
+            </a>
+        @endif
     </div>
 </aside>

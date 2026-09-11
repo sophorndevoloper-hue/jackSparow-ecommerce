@@ -16,6 +16,7 @@ class StockAdjustmentItem extends Model
         'old_quantity',
         'adjusted_quantity',
         'new_quantity',
+        'serial_numbers',
     ];
 
     protected function casts(): array
@@ -24,6 +25,7 @@ class StockAdjustmentItem extends Model
             'old_quantity' => 'integer',
             'adjusted_quantity' => 'integer',
             'new_quantity' => 'integer',
+            'serial_numbers' => 'array',
         ];
     }
 

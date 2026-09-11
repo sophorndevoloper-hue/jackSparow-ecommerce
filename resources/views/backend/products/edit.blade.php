@@ -45,7 +45,7 @@
         <form action="{{ route('admin.products.update', $product->id) }}" method="POST" enctype="multipart/form-data" class="mt-3" id="productEditForm">
             @csrf
             @method('PUT')
-            <input type="hidden" name="allow_stock_mismatch" id="allowStockMismatch" value="0">
+            <input type="hidden" name="allow_stock_mismatch" id="allowStockMismatch" value="1">
 
             <!-- Nav Tabs -->
             <ul class="nav nav-tabs mb-4" id="productEditTabs" role="tablist">
@@ -492,20 +492,31 @@
                                 </div>
                             </div>
 
+                            @php
+                                $inStockSerials = $inStockSerialsCount ?? $product->serialNumbers()->where('status', \App\Models\SerialNumber::STATUS_IN_STOCK)->count();
+                                $totalSerials = $totalSerialsCount ?? $product->serialNumbers()->count();
+                                $isSerialized = $product->requires_serial_tracking || $totalSerials > 0;
+                                $stockQtyValue = $isSerialized ? $inStockSerials : old('stock_quantity', $product->stock_quantity);
+                            @endphp
                             <div class="panel p-4 mb-3 position-relative" id="stockQuantitiesPanel">
-                                <div id="stockMismatchAlertContainer" class="d-none mb-3"></div>
-
                                 <h5 class="mb-3"><i class="bi bi-building text-primary me-2"></i>Stock Quantities</h5>
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <div class="d-flex justify-content-between align-items-center mb-1">
                                             <label class="form-label fw-bold small mb-0" for="stock_quantity">Total Stock Quantity *</label>
-                                            <button type="button" id="btnSyncStockToSerials" class="btn btn-link btn-sm p-0 text-decoration-none font-monospace small d-none" onclick="syncStockQtyToSerials()">
-                                                <i class="bi bi-arrow-repeat me-1"></i>Match Serials (<span class="sync-serials-target">0</span>)
-                                            </button>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="badge bg-light text-secondary border font-monospace fw-normal" style="font-size: 11px;">
+                                                    <i class="bi bi-upc me-1"></i><span id="inStockSerialsStockNotice">{{ $inStockSerials }}</span> in stock <span class="text-muted opacity-75">(<span id="totalSerialsStockNotice">{{ $totalSerials }}</span> total)</span>
+                                                </span>
+                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle {{ $isSerialized ? '' : 'd-none' }}" id="serialSyncLockBadge" style="font-size: 11px;">
+                                                    <i class="bi bi-lock-fill me-1"></i>Matches In-Stock Serials
+                                                </span>
+                                            </div>
                                         </div>
-                                        <input type="number" name="stock_quantity" id="stock_quantity" value="{{ old('stock_quantity', $product->stock_quantity) }}" required class="form-control" min="0">
-                                        <div id="stockQtyMismatchFeedback" class="small mt-1 d-none"></div>
+                                        <input type="number" name="stock_quantity" id="stock_quantity" value="{{ $stockQtyValue }}" required class="form-control {{ $isSerialized ? 'bg-light' : '' }}" min="0" {{ $isSerialized ? 'readonly' : '' }}>
+                                        <div class="form-text text-muted small mt-1 {{ $isSerialized ? '' : 'd-none' }}" id="stockQtySerialHelp">
+                                            <i class="bi bi-info-circle me-1"></i>Total stock quantity strictly matches in-stock serial numbers (<span class="in-stock-serials-target">{{ $inStockSerials }}</span>). Units that are sold, shipped, or RMA are excluded.
+                                        </div>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold small" for="low_stock_threshold">Low Stock Alert Limit *</label>
@@ -520,11 +531,14 @@
 
                                 <div class="d-flex align-items-center justify-content-between mb-3">
                                     <div>
-                                        <h5 class="mb-1"><i class="bi bi-upc text-primary me-2"></i>Tracked Serial Numbers (<span id="trackedSerialsCount">{{ $product->serialNumbers->count() }}</span>)</h5>
+                                        <h5 class="mb-1">
+                                            <i class="bi bi-upc text-primary me-2"></i>Tracked Serial Numbers 
+                                            (<span id="trackedInStockCount" class="text-success fw-bold">{{ $inStockSerials }} In Stock</span> / <span id="trackedSerialsCount">{{ $totalSerials }}</span> Total)
+                                        </h5>
                                         <p class="text-muted small mb-0">Registered serialized hardware units in warehouse inventory.</p>
                                     </div>
                                     <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#ingestSerialsModal">
-                                        <i class="bi bi-plus-circle me-1"></i> Scan / Ingest Serials
+                                        <i class="bi bi-plus-circle me-1"></i> Add / Upload Serials
                                     </button>
                                 </div>
 
@@ -578,6 +592,13 @@
                                 @empty
                                     <p class="small text-muted mb-0">No multi-warehouse stock allocations yet.</p>
                                 @endforelse
+
+                                @if($product->warehouses->isNotEmpty())
+                                    <div class="d-flex justify-content-between align-items-center pt-2 mt-1 fw-bold text-dark">
+                                        <span>Total in Warehouses</span>
+                                        <span class="badge bg-success font-monospace">{{ $product->warehouses->sum('pivot.quantity') }} units</span>
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -603,43 +624,113 @@
     <div class="modal fade" id="ingestSerialsModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
-                <form action="{{ route('admin.products.serials.store', $product->id) }}" method="POST" id="ingestSerialsForm">
+                <form action="{{ route('admin.products.serials.store', $product->id) }}" method="POST" id="ingestSerialsForm" enctype="multipart/form-data">
                     @csrf
                     <div class="modal-header">
-                        <h5 class="modal-title fw-bold"><i class="bi bi-upc-scan text-primary me-2"></i>Batch Ingest Serial Numbers</h5>
+                        <h5 class="modal-title fw-bold"><i class="bi bi-upc-scan text-primary me-2"></i>Add / Upload Serial Numbers</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold small">Receiving Warehouse *</label>
-                            <select name="warehouse_id" id="ingest_warehouse_id" required class="form-select @error('warehouse_id') is-invalid @enderror">
-                                @foreach($warehouses as $wh)
-                                    <option value="{{ $wh->id }}" {{ old('warehouse_id') == $wh->id ? 'selected' : '' }}>{{ $wh->name }} ({{ $wh->code }})</option>
-                                @endforeach
-                            </select>
-                            @error('warehouse_id')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+                        <!-- Mode Tabs -->
+                        <ul class="nav nav-pills nav-fill mb-3 p-1 bg-light rounded border" id="ingestTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active py-1 small fw-semibold" id="tab-ingest-manual-btn" data-bs-toggle="pill" data-bs-target="#tab-ingest-manual" type="button" role="tab">
+                                    <i class="bi bi-upc-scan me-1"></i> Scan / Manual Entry
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link py-1 small fw-semibold" id="tab-ingest-file-btn" data-bs-toggle="pill" data-bs-target="#tab-ingest-file" type="button" role="tab">
+                                    <i class="bi bi-cloud-arrow-up me-1"></i> Upload File
+                                </button>
+                            </li>
+                        </ul>
+
+                        <!-- Receiving Warehouse and Cost fields -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-7">
+                                <label class="form-label fw-bold small mb-1">Receiving Warehouse *</label>
+                                <select name="warehouse_id" id="ingest_warehouse_id" required class="form-select form-select-sm @error('warehouse_id') is-invalid @enderror">
+                                    @foreach($warehouses as $wh)
+                                        <option value="{{ $wh->id }}" {{ old('warehouse_id') == $wh->id ? 'selected' : '' }}>{{ $wh->name }} ({{ $wh->code }})</option>
+                                    @endforeach
+                                </select>
+                                @error('warehouse_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label fw-bold small mb-1">Unit Cost Price ($)</label>
+                                <input type="number" step="0.01" name="cost_price" id="ingest_cost_price" value="{{ old('cost_price', $product->cost_price) }}" class="form-control form-control-sm @error('cost_price') is-invalid @enderror" placeholder="Default cost">
+                                @error('cost_price')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold small">Unit Cost Price ($)</label>
-                            <input type="number" step="0.01" name="cost_price" id="ingest_cost_price" value="{{ old('cost_price', $product->cost_price) }}" class="form-control @error('cost_price') is-invalid @enderror" placeholder="Leave empty to use product default cost">
-                            @error('cost_price')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                        <div class="mb-0">
-                            <label class="form-label fw-bold small">Serial Numbers (Scan barcode or paste 1 per line) *</label>
-                            <textarea name="serials_text" id="ingest_serials_text" rows="6" required class="form-control font-monospace @error('serials_text') is-invalid @enderror" placeholder="SN-AMD-90001
+
+                        <!-- Tab Panes -->
+                        <div class="tab-content" id="ingestTabsContent">
+                            <!-- TAB 1: Scan / Manual Entry -->
+                            <div class="tab-pane fade show active" id="tab-ingest-manual" role="tabpanel">
+                                <label class="form-label fw-bold small mb-1">Serial Numbers (Scan barcode or paste 1 per line) *</label>
+                                <textarea name="serials_text" id="ingest_serials_text" rows="5" class="form-control form-control-sm font-monospace @error('serials_text') is-invalid @enderror" placeholder="SN-AMD-90001
 SN-AMD-90002
-SN-AMD-90003">{{ old('serials_text') }}</textarea>
-                            <div class="invalid-feedback d-block mt-2 fw-semibold d-none" id="ingest_serials_error"></div>
-                            @error('serials_text')
-                                <div class="invalid-feedback d-block mt-2 fw-semibold" id="server_serials_error">
-                                    <i class="bi bi-exclamation-triangle-fill me-1 text-danger"></i> {{ $message }}
+SN-AMD-90003" autocomplete="off">{{ $errors->has('serials_text') ? old('serials_text') : '' }}</textarea>
+                            </div>
+
+                            <!-- TAB 2: File Upload -->
+                            <div class="tab-pane fade" id="tab-ingest-file" role="tabpanel">
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                    <label class="form-label fw-bold small mb-0">Select File <span class="text-danger">*</span></label>
+                                    <div class="dropdown">
+                                        <button class="btn btn-link text-decoration-none p-0 small text-muted" type="button" data-bs-toggle="dropdown" style="font-size: 11.5px;">
+                                            <i class="bi bi-download me-1"></i>Sample templates
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm small py-1" style="font-size: 12px;">
+                                            <li><a class="dropdown-item py-1" href="{{ route('admin.serial-numbers.templates.download', 'csv') }}"><i class="bi bi-filetype-csv text-success me-2"></i>CSV Template</a></li>
+                                            <li><a class="dropdown-item py-1" href="{{ route('admin.serial-numbers.templates.download', 'excel') }}"><i class="bi bi-file-earmark-excel text-success me-2"></i>Excel Template</a></li>
+                                            <li><a class="dropdown-item py-1" href="{{ route('admin.serial-numbers.templates.download', 'json') }}"><i class="bi bi-filetype-json text-warning me-2"></i>JSON Template</a></li>
+                                            <li><a class="dropdown-item py-1" href="{{ route('admin.serial-numbers.templates.download', 'text') }}"><i class="bi bi-file-text text-primary me-2"></i>Plain Text (TXT)</a></li>
+                                        </ul>
+                                    </div>
                                 </div>
-                            @enderror
+                                <input type="file" name="file" id="ingest_serials_file" class="form-control form-control-sm" accept=".csv, .xlsx, .xls, .json, .txt">
+                                <div class="d-flex justify-content-between text-muted mt-1" style="font-size: 11px;">
+                                    <span>Supports CSV, Excel (.xlsx/.xls), JSON, TXT</span>
+                                    <span>Max 10MB</span>
+                                </div>
+
+                                <!-- Live Loading Spinner -->
+                                <div id="file_parsing_spinner" class="text-center py-2 d-none text-muted small mt-2 border rounded bg-light">
+                                    <span class="spinner-border spinner-border-sm text-primary me-2" role="status" aria-hidden="true"></span>
+                                    <span>Reading and extracting serial numbers from file...</span>
+                                </div>
+
+                                <!-- Live Extracted Serial Numbers Text Area Preview -->
+                                <div class="mt-3 d-none" id="file_preview_container">
+                                    <div class="d-flex align-items-center justify-content-between mb-1">
+                                        <label class="form-label fw-bold small mb-0 text-dark">
+                                            <i class="bi bi-list-check text-primary me-1"></i>Extracted Serial Numbers (<span id="file_preview_count" class="text-primary fw-bold">0</span> found)
+                                        </label>
+                                        <button type="button" class="btn btn-link text-danger p-0 text-decoration-none small" style="font-size: 11.5px;" id="file_preview_clear_btn">
+                                            <i class="bi bi-x-circle me-1"></i>Clear File
+                                        </button>
+                                    </div>
+                                    <textarea name="file_preview_text" id="ingest_file_preview_text" rows="6" class="form-control form-control-sm font-monospace" placeholder="Serial numbers will appear here as a list..."></textarea>
+                                    <div class="d-flex justify-content-between align-items-center mt-1 text-muted" style="font-size: 11px;">
+                                        <span><i class="bi bi-pencil-square me-1"></i>Review or edit serials above before saving</span>
+                                        <span id="file_preview_status" class="text-success fw-semibold"></span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+
+                        <!-- Error Feedback Container -->
+                        <div class="invalid-feedback d-block mt-2 fw-semibold d-none" id="ingest_serials_error"></div>
+                        @error('serials_text')
+                            <div class="invalid-feedback d-block mt-2 fw-semibold" id="server_serials_error">
+                                <i class="bi bi-exclamation-triangle-fill me-1 text-danger"></i> {{ $message }}
+                            </div>
+                        @enderror
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
@@ -732,29 +823,246 @@ SN-AMD-90003">{{ old('serials_text') }}</textarea>
                 });
             });
 
-            // Smooth AJAX Serial Ingest (No page reload on error, stays in Stock & Serials tab)
+            // Smooth AJAX Serial Ingest (Barcode scan or File Upload with Live Textarea Preview)
             const ingestForm = document.getElementById('ingestSerialsForm');
+            const fileInput = document.getElementById('ingest_serials_file');
+            const filePreviewContainer = document.getElementById('file_preview_container');
+            const filePreviewText = document.getElementById('ingest_file_preview_text');
+            const filePreviewCount = document.getElementById('file_preview_count');
+            const filePreviewStatus = document.getElementById('file_preview_status');
+            const filePreviewClearBtn = document.getElementById('file_preview_clear_btn');
+            const fileParsingSpinner = document.getElementById('file_parsing_spinner');
+            const serialsInput = document.getElementById('ingest_serials_text');
+            const submitBtn = document.getElementById('ingestSerialsSubmitBtn');
+            const submitText = document.getElementById('ingestSerialsSubmitText');
+            const spinner = document.getElementById('ingestSerialsSpinner');
+            const serialsError = document.getElementById('ingest_serials_error');
+            const serverError = document.getElementById('server_serials_error');
+
+            function clearUploadedFile() {
+                if (fileInput) fileInput.value = '';
+                if (filePreviewText) filePreviewText.value = '';
+                if (filePreviewContainer) filePreviewContainer.classList.add('d-none');
+                if (fileParsingSpinner) fileParsingSpinner.classList.add('d-none');
+                if (filePreviewCount) filePreviewCount.textContent = '0';
+                if (filePreviewStatus) filePreviewStatus.textContent = '';
+                if (submitText) submitText.innerHTML = 'Register Serials &rarr;';
+            }
+
+            if (filePreviewClearBtn) {
+                filePreviewClearBtn.addEventListener('click', clearUploadedFile);
+            }
+
+            function applyExtractedSerials(serials, sourceInfo) {
+                if (!Array.isArray(serials)) serials = [];
+                const cleanList = serials.map(s => String(s).trim().toUpperCase()).filter(Boolean);
+
+                if (filePreviewText) filePreviewText.value = cleanList.join('\n');
+                if (serialsInput) serialsInput.value = cleanList.join('\n');
+                if (filePreviewCount) filePreviewCount.textContent = cleanList.length;
+                if (filePreviewStatus) filePreviewStatus.textContent = sourceInfo || `${cleanList.length} serials ready`;
+                if (filePreviewContainer) filePreviewContainer.classList.remove('d-none');
+                if (fileParsingSpinner) fileParsingSpinner.classList.add('d-none');
+
+                if (submitText) {
+                    submitText.innerHTML = cleanList.length > 0 
+                        ? `Register Serials (${cleanList.length}) &rarr;` 
+                        : 'Register Serials &rarr;';
+                }
+            }
+
+            if (filePreviewText) {
+                filePreviewText.addEventListener('input', function() {
+                    const lines = this.value.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+                    if (filePreviewCount) filePreviewCount.textContent = lines.length;
+                    if (serialsInput) serialsInput.value = this.value;
+                    if (submitText) {
+                        submitText.innerHTML = lines.length > 0 
+                            ? `Register Serials (${lines.length}) &rarr;` 
+                            : 'Register Serials &rarr;';
+                    }
+                });
+            }
+
+            function parseFileOnServer(file) {
+                if (fileParsingSpinner) fileParsingSpinner.classList.remove('d-none');
+                if (filePreviewContainer) filePreviewContainer.classList.add('d-none');
+
+                const fd = new FormData();
+                fd.append('file', file);
+                const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') 
+                    || document.querySelector('input[name="_token"]')?.value 
+                    || '';
+
+                fetch("{{ route('admin.serial-numbers.parse-preview') }}", {
+                    method: 'POST',
+                    body: fd,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': token
+                    }
+                })
+                .then(async res => {
+                    if (fileParsingSpinner) fileParsingSpinner.classList.add('d-none');
+                    const data = await res.json().catch(() => ({}));
+                    if (res.ok && data.success && Array.isArray(data.serials)) {
+                        applyExtractedSerials(data.serials, `Extracted from ${file.name}`);
+                    } else {
+                        const err = data.message || 'Unable to parse serial numbers from file.';
+                        if (serialsError) {
+                            serialsError.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-1 text-danger"></i> ${err}`;
+                            serialsError.classList.remove('d-none');
+                        }
+                    }
+                })
+                .catch(err => {
+                    if (fileParsingSpinner) fileParsingSpinner.classList.add('d-none');
+                    if (serialsError) {
+                        serialsError.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-1 text-danger"></i> ${err.message || 'File parsing error'}`;
+                        serialsError.classList.remove('d-none');
+                    }
+                });
+            }
+
+            if (fileInput) {
+                fileInput.addEventListener('change', function(e) {
+                    const file = e.target.files && e.target.files[0];
+                    if (!file) {
+                        clearUploadedFile();
+                        return;
+                    }
+
+                    if (serialsError) {
+                        serialsError.classList.add('d-none');
+                        serialsError.innerHTML = '';
+                    }
+
+                    const fileName = file.name.toLowerCase();
+                    const ext = fileName.split('.').pop();
+
+                    if (ext === 'csv' || ext === 'txt') {
+                        const reader = new FileReader();
+                        reader.onload = function(evt) {
+                            const raw = evt.target.result;
+                            const lines = raw.split(/\r?\n/);
+                            const serials = [];
+                            const headerAliases = ['serial_number', 'serial', 'serial number', 'sn', 'barcode', 'product_sku', 'sku'];
+
+                            for (let i = 0; i < lines.length; i++) {
+                                let line = lines[i].trim();
+                                if (!line) continue;
+                                if (i === 0 && line.charCodeAt(0) === 0xFEFF) {
+                                    line = line.slice(1).trim();
+                                }
+
+                                let col0 = line;
+                                if (ext === 'csv') {
+                                    if (line.startsWith('"')) {
+                                        const endIdx = line.indexOf('"', 1);
+                                        col0 = endIdx !== -1 ? line.substring(1, endIdx) : line;
+                                    } else if (line.includes(',')) {
+                                        col0 = line.split(',')[0];
+                                    } else if (line.includes('\t')) {
+                                        col0 = line.split('\t')[0];
+                                    } else if (line.includes(';')) {
+                                        col0 = line.split(';')[0];
+                                    }
+                                }
+                                col0 = col0.replace(/["']/g, '').trim();
+
+                                if (i === 0 && headerAliases.includes(col0.toLowerCase().replace(/[\s\-_]/g, '_'))) {
+                                    continue;
+                                }
+
+                                if (col0) {
+                                    serials.push(col0);
+                                }
+                            }
+
+                            if (serials.length > 0) {
+                                applyExtractedSerials(serials, `Extracted from ${file.name}`);
+                            } else {
+                                parseFileOnServer(file);
+                            }
+                        };
+                        reader.onerror = function() {
+                            parseFileOnServer(file);
+                        };
+                        reader.readAsText(file);
+                    } else if (ext === 'json') {
+                        const reader = new FileReader();
+                        reader.onload = function(evt) {
+                            try {
+                                const parsed = JSON.parse(evt.target.result);
+                                const list = Array.isArray(parsed) ? parsed : (parsed.serials || parsed.items || []);
+                                const serials = [];
+                                list.forEach(item => {
+                                    const s = typeof item === 'string' ? item : (item.serial_number || item.serial || item.sn || '');
+                                    if (s) serials.push(String(s).trim());
+                                });
+                                applyExtractedSerials(serials, `Extracted from ${file.name}`);
+                            } catch (err) {
+                                parseFileOnServer(file);
+                            }
+                        };
+                        reader.onerror = function() {
+                            parseFileOnServer(file);
+                        };
+                        reader.readAsText(file);
+                    } else {
+                        // Excel (.xlsx, .xls)
+                        parseFileOnServer(file);
+                    }
+                });
+            }
+
+            const modalEl = document.getElementById('ingestSerialsModal');
+            if (modalEl) {
+                modalEl.addEventListener('hidden.bs.modal', function() {
+                    clearUploadedFile();
+                    if (serialsInput) serialsInput.value = '';
+                });
+                modalEl.addEventListener('show.bs.modal', function() {
+                    clearUploadedFile();
+                    if (serialsInput) serialsInput.value = '';
+                });
+            }
+
             if (ingestForm) {
                 ingestForm.addEventListener('submit', function(e) {
                     e.preventDefault();
 
-                    const submitBtn = document.getElementById('ingestSerialsSubmitBtn');
-                    const submitText = document.getElementById('ingestSerialsSubmitText');
-                    const spinner = document.getElementById('ingestSerialsSpinner');
-                    const serialsInput = document.getElementById('ingest_serials_text');
-                    const serialsError = document.getElementById('ingest_serials_error');
-                    const serverError = document.getElementById('server_serials_error');
+                    // If file preview textarea has content, sync to serialsInput
+                    if (filePreviewText && filePreviewText.value.trim() !== '') {
+                        if (serialsInput) serialsInput.value = filePreviewText.value.trim();
+                    }
 
                     // Reset previous error messages
-                    serialsInput.classList.remove('is-invalid');
-                    serialsError.classList.add('d-none');
-                    serialsError.innerHTML = '';
+                    if (serialsInput) serialsInput.classList.remove('is-invalid');
+                    if (fileInput) fileInput.classList.remove('is-invalid');
+                    if (serialsError) {
+                        serialsError.classList.add('d-none');
+                        serialsError.innerHTML = '';
+                    }
                     if (serverError) serverError.remove();
+
+                    // Check if file or text is provided
+                    const hasText = serialsInput && serialsInput.value.trim() !== '';
+                    const hasFile = fileInput && fileInput.files && fileInput.files.length > 0;
+
+                    if (!hasText && !hasFile) {
+                        if (serialsError) {
+                            serialsError.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1 text-danger"></i> Please scan/enter serial numbers or choose a file to upload.';
+                            serialsError.classList.remove('d-none');
+                        }
+                        return;
+                    }
 
                     // Show loading state
                     submitBtn.disabled = true;
                     if (spinner) spinner.classList.remove('d-none');
-                    if (submitText) submitText.textContent = 'Registering...';
+                    if (submitText) submitText.textContent = hasFile && !hasText ? 'Uploading & Processing...' : 'Registering...';
 
                     const formData = new FormData(ingestForm);
                     const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') 
@@ -773,29 +1081,31 @@ SN-AMD-90003">{{ old('serials_text') }}</textarea>
                     .then(async response => {
                         const data = await response.json().catch(() => ({}));
                         if (!response.ok) {
-                            // Extract error message
                             let errorMsg = data.message || 'An error occurred while ingesting serial numbers.';
-                            if (data.errors && data.errors.serials_text) {
-                                errorMsg = Array.isArray(data.errors.serials_text) ? data.errors.serials_text[0] : data.errors.serials_text;
+                            if (data.errors) {
+                                if (data.errors.serials_text) {
+                                    errorMsg = Array.isArray(data.errors.serials_text) ? data.errors.serials_text[0] : data.errors.serials_text;
+                                } else if (data.errors.file) {
+                                    errorMsg = Array.isArray(data.errors.file) ? data.errors.file[0] : data.errors.file;
+                                }
                             }
 
-                            // Show error inside modal without reloading page!
-                            serialsInput.classList.add('is-invalid');
-                            serialsError.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-1 text-danger"></i> ${errorMsg}`;
-                            serialsError.classList.remove('d-none');
+                            if (serialsError) {
+                                serialsError.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-1 text-danger"></i> ${errorMsg}`;
+                                serialsError.classList.remove('d-none');
+                            }
                             return;
                         }
 
-                        // SUCCESS!
                         // Hide modal
-                        const modalEl = document.getElementById('ingestSerialsModal');
                         if (modalEl && window.bootstrap) {
                             const bsModal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
                             bsModal.hide();
                         }
 
-                        // Reset input
-                        serialsInput.value = '';
+                        // Reset inputs
+                        if (serialsInput) serialsInput.value = '';
+                        clearUploadedFile();
 
                         // Update table in Tab 4
                         if (data.serials && data.serials.length > 0) {
@@ -818,20 +1128,26 @@ SN-AMD-90003">{{ old('serials_text') }}</textarea>
                             }
                         }
 
-                        // Update badge counts
-                        if (data.total_count !== undefined) {
-                            const badge1 = document.getElementById('trackedSerialsCount');
-                            const badge2 = document.getElementById('tabSerialsCount');
-                            if (badge1) badge1.textContent = data.total_count;
-                            if (badge2) badge2.textContent = data.total_count;
+                        // Update badge counts and stock quantity
+                        const inStockCount = data.in_stock_count !== undefined ? data.in_stock_count : (data.total_count || 0);
+                        const totalCount = data.total_count !== undefined ? data.total_count : inStockCount;
 
-                            // Automatically update stock_quantity input and sync check
-                            const stockInput = document.getElementById('stock_quantity');
-                            if (stockInput) {
-                                stockInput.value = data.total_count;
-                                checkStockQuantityMatch();
-                            }
-                        }
+                        const countMap = {
+                            'trackedSerialsCount': totalCount,
+                            'tabSerialsCount': inStockCount,
+                            'inStockSerialsStockNotice': inStockCount,
+                            'totalSerialsStockNotice': totalCount,
+                            'trackedInStockCount': inStockCount + ' In Stock',
+                        };
+
+                        Object.entries(countMap).forEach(([id, val]) => {
+                            const el = document.getElementById(id);
+                            if (el) el.textContent = val;
+                        });
+
+                        document.querySelectorAll('.in-stock-serials-target').forEach(el => el.textContent = inStockCount);
+
+                        updateSerialSyncLock(inStockCount, totalCount);
 
                         // Show success alert in Stock & Serials tab
                         const successAlert = document.getElementById('serialsTabSuccessAlert');
@@ -844,9 +1160,10 @@ SN-AMD-90003">{{ old('serials_text') }}</textarea>
                         }
                     })
                     .catch(err => {
-                        serialsInput.classList.add('is-invalid');
-                        serialsError.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-1 text-danger"></i> ${err.message || 'Network error occurred.'}`;
-                        serialsError.classList.remove('d-none');
+                        if (serialsError) {
+                            serialsError.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-1 text-danger"></i> ${err.message || 'Network error occurred.'}`;
+                            serialsError.classList.remove('d-none');
+                        }
                     })
                     .finally(() => {
                         submitBtn.disabled = false;
@@ -856,168 +1173,50 @@ SN-AMD-90003">{{ old('serials_text') }}</textarea>
                 });
             }
 
-            // Stock Quantity vs Serial Number Matching
-            function getTrackedSerialsCount() {
-                const el = document.getElementById('trackedSerialsCount');
-                if (!el) return 0;
-                const count = parseInt(el.textContent.trim(), 10);
-                return isNaN(count) ? 0 : count;
-            }
-
-            function checkStockQuantityMatch() {
-                const stockInput = document.getElementById('stock_quantity');
-                const feedback = document.getElementById('stockQtyMismatchFeedback');
-                const syncBtn = document.getElementById('btnSyncStockToSerials');
+            // Sync and lock stock quantity directly to in-stock serial numbers count
+            function updateSerialSyncLock(overrideInStock, overrideTotal) {
                 const trackingCheckbox = document.getElementById('requiresSerialTracking');
-                if (!stockInput || !feedback) return { matched: true, type: 'exact' };
-
-                const serialCount = getTrackedSerialsCount();
-                const isTracked = (trackingCheckbox && trackingCheckbox.checked) || serialCount > 0;
-                const stockVal = stockInput.value.trim();
-                const stockQty = parseInt(stockVal, 10);
-
-                // Update sync button labels
-                document.querySelectorAll('.sync-serials-target').forEach(el => el.textContent = serialCount);
-
-                if (!isTracked && serialCount === 0) {
-                    feedback.classList.add('d-none');
-                    stockInput.classList.remove('is-invalid', 'is-valid');
-                    if (syncBtn) syncBtn.classList.add('d-none');
-                    return { matched: true, type: 'untracked' };
-                }
-
-                if (stockVal === '' || isNaN(stockQty)) {
-                    stockInput.classList.add('is-invalid');
-                    stockInput.classList.remove('is-valid');
-                    feedback.className = 'small mt-1 text-danger fw-semibold d-block';
-                    feedback.innerHTML = '<i class="bi bi-exclamation-circle-fill me-1"></i> Total stock quantity is required.';
-                    if (syncBtn && serialCount > 0) syncBtn.classList.remove('d-none');
-                    return { matched: false, type: 'empty', stockQty: 0, serialCount: serialCount };
-                }
-
-                if (serialCount > 0 && stockQty > serialCount) {
-                    stockInput.classList.add('is-invalid');
-                    stockInput.classList.remove('is-valid');
-                    if (syncBtn) syncBtn.classList.remove('d-none');
-                    feedback.className = 'small mt-1 text-warning-emphasis fw-semibold d-block';
-                    feedback.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-warning me-1"></i> Total stock quantity (${stockQty}) is more than tracked serial numbers (${serialCount}).`;
-                    return { matched: false, type: 'more', stockQty: stockQty, serialCount: serialCount };
-                } else if (serialCount > 0 && stockQty < serialCount) {
-                    stockInput.classList.add('is-invalid');
-                    stockInput.classList.remove('is-valid');
-                    if (syncBtn) syncBtn.classList.remove('d-none');
-                    feedback.className = 'small mt-1 text-danger fw-semibold d-block';
-                    feedback.innerHTML = `<i class="bi bi-exclamation-circle-fill text-danger me-1"></i> Total stock quantity (${stockQty}) is less than tracked serial numbers (${serialCount}).`;
-                    return { matched: false, type: 'less', stockQty: stockQty, serialCount: serialCount };
-                } else {
-                    stockInput.classList.remove('is-invalid');
-                    stockInput.classList.add('is-valid');
-                    if (syncBtn) syncBtn.classList.add('d-none');
-                    feedback.className = 'small mt-1 text-success fw-semibold d-block';
-                    feedback.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i> Total stock quantity matches tracked serial numbers (${serialCount}).`;
-                    return { matched: true, type: 'exact', stockQty: stockQty, serialCount: serialCount };
-                }
-            }
-
-            window.syncStockQtyToSerials = function() {
-                const count = getTrackedSerialsCount();
                 const stockInput = document.getElementById('stock_quantity');
-                if (stockInput) {
-                    stockInput.value = count;
-                    checkStockQuantityMatch();
-                    const alertContainer = document.getElementById('stockMismatchAlertContainer');
-                    if (alertContainer) alertContainer.classList.add('d-none');
-                }
-            };
+                const lockBadge = document.getElementById('serialSyncLockBadge');
+                const helpText = document.getElementById('stockQtySerialHelp');
 
-            const stockQuantityInput = document.getElementById('stock_quantity');
-            if (stockQuantityInput) {
-                stockQuantityInput.addEventListener('input', checkStockQuantityMatch);
-                stockQuantityInput.addEventListener('change', checkStockQuantityMatch);
+                const inStockNotice = document.getElementById('inStockSerialsStockNotice');
+                const totalNotice = document.getElementById('totalSerialsStockNotice');
+
+                let inStockCount = overrideInStock !== undefined 
+                    ? overrideInStock 
+                    : (inStockNotice ? parseInt(inStockNotice.textContent.trim(), 10) || 0 : 0);
+                let totalCount = overrideTotal !== undefined 
+                    ? overrideTotal 
+                    : (totalNotice ? parseInt(totalNotice.textContent.trim(), 10) || 0 : inStockCount);
+
+                const isTracked = (trackingCheckbox && trackingCheckbox.checked) || totalCount > 0;
+
+                if (stockInput) {
+                    if (isTracked) {
+                        stockInput.value = inStockCount;
+                        stockInput.readOnly = true;
+                        stockInput.classList.add('bg-light');
+                        if (lockBadge) lockBadge.classList.remove('d-none');
+                        if (helpText) helpText.classList.remove('d-none');
+                    } else {
+                        stockInput.readOnly = false;
+                        stockInput.classList.remove('bg-light');
+                        if (lockBadge) lockBadge.classList.add('d-none');
+                        if (helpText) helpText.classList.add('d-none');
+                    }
+                }
+
+                document.querySelectorAll('.in-stock-serials-target').forEach(el => el.textContent = inStockCount);
             }
 
             const requiresSerialCheckbox = document.getElementById('requiresSerialTracking');
             if (requiresSerialCheckbox) {
-                requiresSerialCheckbox.addEventListener('change', checkStockQuantityMatch);
+                requiresSerialCheckbox.addEventListener('change', updateSerialSyncLock);
             }
 
-            // Run initial check on page load
-            checkStockQuantityMatch();
-
-            // Product edit form submission check
-            const productEditForm = document.getElementById('productEditForm');
-            if (productEditForm) {
-                productEditForm.addEventListener('submit', function(e) {
-                    const allowInput = document.getElementById('allowStockMismatch');
-                    if (allowInput && allowInput.value === '1') {
-                        return; // proceed with confirmed submission
-                    }
-
-                    const check = checkStockQuantityMatch();
-                    if (!check.matched && (check.type === 'more' || check.type === 'less')) {
-                        e.preventDefault();
-                        e.stopPropagation();
-
-                        // Switch to Tab 4 (Stock & Serials)
-                        const inventoryTabBtn = document.getElementById('inventory-tab');
-                        if (inventoryTabBtn && window.bootstrap) {
-                            const tabInstance = bootstrap.Tab.getInstance(inventoryTabBtn) || new bootstrap.Tab(inventoryTabBtn);
-                            tabInstance.show();
-                        }
-
-                        const msg = check.type === 'more'
-                            ? `Total stock quantity (${check.stockQty}) is more than tracked serial numbers (${check.serialCount}).`
-                            : `Total stock quantity (${check.stockQty}) is less than tracked serial numbers (${check.serialCount}).`;
-
-                        // Show dismissible alert banner in Stock Quantities card
-                        const alertContainer = document.getElementById('stockMismatchAlertContainer');
-                        if (alertContainer) {
-                            alertContainer.innerHTML = `
-                                <div class="alert alert-warning alert-dismissible fade show d-flex align-items-center justify-content-between p-3 shadow-xs" role="alert">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <i class="bi bi-exclamation-triangle-fill text-warning fs-5 flex-shrink-0"></i>
-                                        <div>
-                                            <strong>Stock &amp; Serial Number Mismatch!</strong><br>
-                                            ${msg} Please adjust total stock quantity to ${check.serialCount} or register matching serial numbers.
-                                        </div>
-                                    </div>
-                                    <div class="d-flex align-items-center gap-2">
-                                        <button type="button" class="btn btn-sm btn-dark font-monospace text-nowrap" onclick="syncStockQtyToSerials()">
-                                            <i class="bi bi-arrow-repeat me-1"></i>Set to ${check.serialCount}
-                                        </button>
-                                        <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close"></button>
-                                    </div>
-                                </div>
-                            `;
-                            alertContainer.classList.remove('d-none');
-                            alertContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }
-
-                        // Also open confirm modal dialog
-                        if (typeof window.confirmModal === 'function') {
-                            window.confirmModal({
-                                title: 'Stock Quantity Mismatch Alert',
-                                message: msg,
-                                detail: `You entered a total stock quantity of ${check.stockQty}, but there are ${check.serialCount} tracked serial numbers registered. Would you like to review and adjust your stock, or proceed anyway?`,
-                                type: 'warning',
-                                confirmText: 'Update Anyway',
-                                cancelText: 'Review & Adjust',
-                            }).then(function(confirmed) {
-                                if (confirmed) {
-                                    if (allowInput) allowInput.value = '1';
-                                    productEditForm.submit();
-                                } else {
-                                    const input = document.getElementById('stock_quantity');
-                                    if (input) {
-                                        input.focus();
-                                        input.select();
-                                    }
-                                }
-                            });
-                        }
-                    }
-                });
-            }
+            // Run on load
+            updateSerialSyncLock();
         });
     </script>
 </x-app-layout>

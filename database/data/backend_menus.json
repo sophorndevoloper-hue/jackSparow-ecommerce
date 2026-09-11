@@ -1,0 +1,430 @@
+[
+  {
+    "slug": "dashboard",
+    "parent_slug": null,
+    "title": "Dashboard",
+    "section": "Main",
+    "route_name": "admin.dashboard",
+    "icon": "bi-speedometer2",
+    "view_permission": "view dashboard",
+    "sort_order": 1,
+    "is_active": true,
+    "actions": [
+      {
+        "name": "View",
+        "action_type": "view",
+        "route_name": "admin.dashboard",
+        "permission": "view dashboard"
+      }
+    ]
+  },
+  {
+    "slug": "products",
+    "parent_slug": null,
+    "title": "Manage Products",
+    "section": "Inventory",
+    "route_name": null,
+    "icon": "bi-cpu",
+    "view_permission": null,
+    "sort_order": 10,
+    "is_active": true,
+    "actions": []
+  },
+  {
+    "slug": "products_list",
+    "parent_slug": "products",
+    "title": "All Products",
+    "section": "Inventory",
+    "route_name": "admin.products.index",
+    "icon": "bi-list-ul",
+    "view_permission": "view products",
+    "sort_order": 11,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.products.index", "permission": "view products" },
+      { "name": "Create", "action_type": "create", "route_name": "admin.products.create", "permission": "create products" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.products.edit", "permission": "edit products" },
+      { "name": "Delete", "action_type": "delete", "route_name": "admin.products.destroy", "permission": "delete products" }
+    ]
+  },
+  {
+    "slug": "products_create",
+    "parent_slug": "products",
+    "title": "Add Product",
+    "section": "Inventory",
+    "route_name": "admin.products.create",
+    "icon": "bi-plus-circle",
+    "view_permission": "create products",
+    "sort_order": 12,
+    "is_active": true,
+    "actions": [
+      { "name": "Create", "action_type": "create", "route_name": "admin.products.create", "permission": "create products" }
+    ]
+  },
+  {
+    "slug": "products_images",
+    "parent_slug": "products",
+    "title": "Upload Product Img",
+    "section": "Inventory",
+    "route_name": "admin.products.images.index",
+    "icon": "bi-images",
+    "view_permission": "view products|create products|edit products",
+    "sort_order": 13,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.products.images.index", "permission": "view products" },
+      { "name": "Create", "action_type": "create", "route_name": "admin.products.images.store", "permission": "create products" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.products.images.save", "permission": "edit products" },
+      { "name": "Delete", "action_type": "delete", "route_name": "admin.products.images.destroy", "permission": "delete products" }
+    ]
+  },
+  {
+    "slug": "product_collections",
+    "parent_slug": "products",
+    "title": "Product Collections",
+    "section": "Inventory",
+    "route_name": "admin.collections.index",
+    "icon": "bi-collection",
+    "view_permission": "view collections",
+    "sort_order": 14,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.collections.index", "permission": "view collections" },
+      { "name": "Create", "action_type": "create", "route_name": "admin.collections.create", "permission": "create collections" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.collections.edit", "permission": "edit collections" },
+      { "name": "Delete", "action_type": "delete", "route_name": "admin.collections.destroy", "permission": "delete collections" }
+    ]
+  },
+  {
+    "slug": "stock",
+    "parent_slug": null,
+    "title": "Manage Stock",
+    "section": "Inventory",
+    "route_name": null,
+    "icon": "bi-box-seam",
+    "view_permission": null,
+    "sort_order": 20,
+    "is_active": true,
+    "actions": []
+  },
+  {
+    "slug": "stock_overview",
+    "parent_slug": "stock",
+    "title": "Stock Overview",
+    "section": "Inventory",
+    "route_name": "admin.stock.index",
+    "icon": "bi-boxes",
+    "view_permission": "view stock",
+    "sort_order": 21,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.stock.index", "permission": "view stock" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.stock.update", "permission": "edit stock" }
+    ]
+  },
+  {
+    "slug": "serial_numbers",
+    "parent_slug": "stock",
+    "title": "Serial Registry & Warranties",
+    "section": "Inventory",
+    "route_name": "admin.serial-numbers.index",
+    "icon": "bi-upc-scan",
+    "view_permission": "view stock",
+    "sort_order": 22,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.serial-numbers.index", "permission": "view stock" },
+      { "name": "Create", "action_type": "create", "route_name": "admin.serial-numbers.store", "permission": "create stock" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.serial-numbers.update", "permission": "edit stock" },
+      { "name": "Delete", "action_type": "delete", "route_name": "admin.serial-numbers.destroy", "permission": "delete stock" }
+    ]
+  },
+  {
+    "slug": "stock_adjustments",
+    "parent_slug": "stock",
+    "title": "Stock Adjustments",
+    "section": "Inventory",
+    "route_name": "admin.stock.adjustments.index",
+    "icon": "bi-sliders",
+    "view_permission": "view stock",
+    "sort_order": 23,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.stock.adjustments.index", "permission": "view stock" },
+      { "name": "Create", "action_type": "create", "route_name": "admin.stock.adjustments.create", "permission": "create stock" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.stock.adjustments.edit", "permission": "edit stock" },
+      { "name": "Delete", "action_type": "delete", "route_name": "admin.stock.adjustments.destroy", "permission": "delete stock" }
+    ]
+  },
+  {
+    "slug": "stock_transfers",
+    "parent_slug": "stock",
+    "title": "Stock Transfers",
+    "section": "Inventory",
+    "route_name": "admin.stock.transfers.index",
+    "icon": "bi-arrow-left-right",
+    "view_permission": "view stock",
+    "sort_order": 24,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.stock.transfers.index", "permission": "view stock" },
+      { "name": "Create", "action_type": "create", "route_name": "admin.stock.transfers.create", "permission": "create stock" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.stock.transfers.edit", "permission": "edit stock" },
+      { "name": "Delete", "action_type": "delete", "route_name": "admin.stock.transfers.destroy", "permission": "delete stock" }
+    ]
+  },
+  {
+    "slug": "stock_low",
+    "parent_slug": "stock",
+    "title": "Low Stock Alerts",
+    "section": "Inventory",
+    "route_name": "admin.stock.index",
+    "icon": "bi-exclamation-triangle-fill text-warning",
+    "view_permission": "view stock",
+    "sort_order": 25,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.stock.index", "permission": "view stock" }
+    ]
+  },
+  {
+    "slug": "stock_out",
+    "parent_slug": "stock",
+    "title": "Out of Stock",
+    "section": "Inventory",
+    "route_name": "admin.stock.index",
+    "icon": "bi-x-octagon-fill text-danger",
+    "view_permission": "view stock",
+    "sort_order": 26,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.stock.index", "permission": "view stock" }
+    ]
+  },
+  {
+    "slug": "warehouses",
+    "parent_slug": null,
+    "title": "Manage Warehouses",
+    "section": "Inventory",
+    "route_name": null,
+    "icon": "bi-buildings",
+    "view_permission": null,
+    "sort_order": 27,
+    "is_active": true,
+    "actions": []
+  },
+  {
+    "slug": "warehouses_list",
+    "parent_slug": "warehouses",
+    "title": "All Warehouses",
+    "section": "Inventory",
+    "route_name": "admin.warehouses.index",
+    "icon": "bi-list-ul",
+    "view_permission": "view warehouses",
+    "sort_order": 28,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.warehouses.index", "permission": "view warehouses" },
+      { "name": "Create", "action_type": "create", "route_name": "admin.warehouses.create", "permission": "create warehouses" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.warehouses.edit", "permission": "edit warehouses" },
+      { "name": "Delete", "action_type": "delete", "route_name": "admin.warehouses.destroy", "permission": "delete warehouses" }
+    ]
+  },
+  {
+    "slug": "warehouses_create",
+    "parent_slug": "warehouses",
+    "title": "Add Warehouse",
+    "section": "Inventory",
+    "route_name": "admin.warehouses.create",
+    "icon": "bi-plus-circle",
+    "view_permission": "create warehouses",
+    "sort_order": 29,
+    "is_active": true,
+    "actions": [
+      { "name": "Create", "action_type": "create", "route_name": "admin.warehouses.create", "permission": "create warehouses" }
+    ]
+  },
+  {
+    "slug": "categories",
+    "parent_slug": null,
+    "title": "Categories",
+    "section": "Inventory",
+    "route_name": "admin.categories.index",
+    "icon": "bi-grid-3x3-gap",
+    "view_permission": "view categories",
+    "sort_order": 30,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.categories.index", "permission": "view categories" },
+      { "name": "Create", "action_type": "create", "route_name": "admin.categories.create", "permission": "create categories" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.categories.edit", "permission": "edit categories" },
+      { "name": "Delete", "action_type": "delete", "route_name": "admin.categories.destroy", "permission": "delete categories" }
+    ]
+  },
+  {
+    "slug": "brands",
+    "parent_slug": null,
+    "title": "Brands",
+    "section": "Inventory",
+    "route_name": "admin.brands.index",
+    "icon": "bi-patch-check",
+    "view_permission": "view brands",
+    "sort_order": 35,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.brands.index", "permission": "view brands" },
+      { "name": "Create", "action_type": "create", "route_name": "admin.brands.create", "permission": "create brands" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.brands.edit", "permission": "edit brands" },
+      { "name": "Delete", "action_type": "delete", "route_name": "admin.brands.destroy", "permission": "delete brands" }
+    ]
+  },
+  {
+    "slug": "makes",
+    "parent_slug": null,
+    "title": "Makes",
+    "section": "Inventory",
+    "route_name": "admin.makes.index",
+    "icon": "bi-tools",
+    "view_permission": "view makes",
+    "sort_order": 36,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.makes.index", "permission": "view makes" },
+      { "name": "Create", "action_type": "create", "route_name": "admin.makes.create", "permission": "create makes" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.makes.edit", "permission": "edit makes" },
+      { "name": "Delete", "action_type": "delete", "route_name": "admin.makes.destroy", "permission": "delete makes" }
+    ]
+  },
+  {
+    "slug": "orders",
+    "parent_slug": null,
+    "title": "Orders",
+    "section": "Sales & Fulfillment",
+    "route_name": "admin.orders.index",
+    "icon": "bi-cart-check",
+    "view_permission": "view orders",
+    "sort_order": 40,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.orders.index", "permission": "view orders" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.orders.status", "permission": "edit orders" },
+      { "name": "Delete", "action_type": "delete", "route_name": "admin.orders.index", "permission": "delete orders" }
+    ]
+  },
+  {
+    "slug": "customer_groups",
+    "parent_slug": null,
+    "title": "Customer Groups (B2B)",
+    "section": "People",
+    "route_name": "admin.customer-groups.index",
+    "icon": "bi-tags-fill",
+    "view_permission": "view customer groups",
+    "sort_order": 48,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.customer-groups.index", "permission": "view customer groups" },
+      { "name": "Create", "action_type": "create", "route_name": "admin.customer-groups.create", "permission": "create customer groups" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.customer-groups.edit", "permission": "edit customer groups" },
+      { "name": "Delete", "action_type": "delete", "route_name": "admin.customer-groups.destroy", "permission": "delete customer groups" }
+    ]
+  },
+  {
+    "slug": "customers",
+    "parent_slug": null,
+    "title": "Customers (Simple/VIP)",
+    "section": "People",
+    "route_name": "admin.customers.index",
+    "icon": "bi-person-badge-fill",
+    "view_permission": "view customers",
+    "sort_order": 50,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.customers.index", "permission": "view customers" },
+      { "name": "Create", "action_type": "create", "route_name": "admin.customers.index", "permission": "create customers" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.customers.toggle-special", "permission": "edit customers" },
+      { "name": "Delete", "action_type": "delete", "route_name": "admin.customers.index", "permission": "delete customers" }
+    ]
+  },
+  {
+    "slug": "suppliers",
+    "parent_slug": null,
+    "title": "Suppliers",
+    "section": "People",
+    "route_name": "admin.suppliers.index",
+    "icon": "bi-truck",
+    "view_permission": "view suppliers",
+    "sort_order": 55,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.suppliers.index", "permission": "view suppliers" },
+      { "name": "Create", "action_type": "create", "route_name": "admin.suppliers.create", "permission": "create suppliers" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.suppliers.edit", "permission": "edit suppliers|manage suppliers" },
+      { "name": "Delete", "action_type": "delete", "route_name": "admin.suppliers.destroy", "permission": "delete suppliers|manage suppliers" },
+      { "name": "Manage", "action_type": "edit", "route_name": "admin.suppliers.index", "permission": "manage suppliers" }
+    ]
+  },
+  {
+    "slug": "settings",
+    "parent_slug": null,
+    "title": "Settings",
+    "section": "System Access",
+    "route_name": null,
+    "icon": "bi-gear-wide-connected",
+    "view_permission": null,
+    "sort_order": 60,
+    "is_active": true,
+    "actions": []
+  },
+  {
+    "slug": "users",
+    "parent_slug": "settings",
+    "title": "Users",
+    "section": "System Access",
+    "route_name": "admin.users.index",
+    "icon": "bi-people-fill",
+    "view_permission": "view users",
+    "sort_order": 61,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.users.index", "permission": "view users" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.users.edit", "permission": "edit users|manage users" },
+      { "name": "Approve", "action_type": "edit", "route_name": "admin.users.toggle-approval", "permission": "approve users|manage users" },
+      { "name": "Delete", "action_type": "delete", "route_name": "admin.users.destroy", "permission": "delete users|manage users" },
+      { "name": "Manage", "action_type": "edit", "route_name": "admin.users.index", "permission": "manage users" }
+    ]
+  },
+  {
+    "slug": "roles",
+    "parent_slug": "settings",
+    "title": "Roles",
+    "section": "System Access",
+    "route_name": "admin.roles.index",
+    "icon": "bi-shield-lock-fill",
+    "view_permission": "view roles",
+    "sort_order": 62,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.roles.index", "permission": "view roles" },
+      { "name": "Create", "action_type": "create", "route_name": "admin.roles.create", "permission": "create roles|manage roles" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.roles.edit", "permission": "edit roles|manage roles" },
+      { "name": "Delete", "action_type": "delete", "route_name": "admin.roles.destroy", "permission": "delete roles|manage roles" },
+      { "name": "Manage", "action_type": "edit", "route_name": "admin.roles.index", "permission": "manage roles" }
+    ]
+  },
+  {
+    "slug": "menu_setup",
+    "parent_slug": "settings",
+    "title": "Menu Setup",
+    "section": "System Access",
+    "route_name": "admin.menus.index",
+    "icon": "bi-sliders",
+    "view_permission": "view menus|view settings",
+    "sort_order": 63,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.menus.index", "permission": "view menus|view settings" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.menus.edit", "permission": "edit menus|edit settings" }
+    ]
+  }
+]
+

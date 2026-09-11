@@ -37,24 +37,38 @@ beforeEach(function () {
         'delete warehouses',
         'view orders',
         'edit orders',
+        'delete orders',
         'view customers',
+        'create customers',
         'edit customers',
+        'delete customers',
+        'view customer groups',
+        'create customer groups',
+        'edit customer groups',
+        'delete customer groups',
         'view suppliers',
         'create suppliers',
         'edit suppliers',
         'delete suppliers',
+        'manage suppliers',
         'view users',
         'edit users',
         'approve users',
         'delete users',
+        'manage users',
         'view roles',
         'create roles',
         'edit roles',
         'delete roles',
+        'manage roles',
         'view menus',
         'edit menus',
         'view settings',
         'edit settings',
+        'view stock',
+        'create stock',
+        'edit stock',
+        'delete stock',
     ];
 
     foreach ($permissions as $perm) {
@@ -388,10 +402,23 @@ it('dynamically redirects staff user with view products to products index instea
 });
 
 it('allows any authenticated admin user to clear system cache without permissions', function () {
-    $user = User::factory()->create(['is_approved' => true]);
+    $adminUser = User::factory()->create(['is_approved' => true]);
 
-    $response = $this->actingAs($user, 'backend')->post(route('admin.cache.clear'));
+    $response = $this->actingAs($adminUser, 'backend')->post(route('admin.cache.clear'));
 
     $response->assertRedirect();
     $response->assertSessionHas('success');
+});
+
+it('protects stock and serial number management with dedicated stock permissions', function () {
+    $user = User::factory()->create(['is_approved' => true]);
+
+    // Without permissions, user cannot access stock or serial numbers
+    $this->actingAs($user, 'backend')->get(route('admin.stock.index'))->assertStatus(403);
+    $this->actingAs($user, 'backend')->get(route('admin.serial-numbers.index'))->assertStatus(403);
+
+    // Give view stock permission
+    $user->givePermissionTo(Permission::findByName('view stock', 'backend'));
+    $this->actingAs($user, 'backend')->get(route('admin.stock.index'))->assertStatus(200);
+    $this->actingAs($user, 'backend')->get(route('admin.serial-numbers.index'))->assertStatus(200);
 });

@@ -35,6 +35,28 @@
         margin-left: 0 !important;
       }
     }
+    @media print {
+      html,
+      html[data-theme="dark"],
+      html[data-bs-theme="dark"],
+      body,
+      html[data-theme="dark"] body,
+      html[data-bs-theme="dark"] body,
+      .admin-shell,
+      .admin-main,
+      .dashboard-content {
+        background-color: #ffffff !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+        color-scheme: light !important;
+      }
+      .admin-navbar,
+      .admin-sidebar,
+      .sidebar-backdrop,
+      .admin-footer {
+        display: none !important;
+      }
+    }
   </style>
   <script>
     (function () {

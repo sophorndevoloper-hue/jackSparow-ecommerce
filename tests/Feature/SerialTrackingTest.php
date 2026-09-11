@@ -6,6 +6,7 @@ use App\Models\SerialNumber;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\SerialTrackingService;
+use Illuminate\Http\UploadedFile;
 use Spatie\Permission\Models\Role;
 
 beforeEach(function () {
@@ -534,4 +535,105 @@ it('returns JSON success response with new records for AJAX requests on product 
     ]);
 
     expect(SerialNumber::where('product_id', $product->id)->count())->toBe(2);
+});
+
+it('allows ingesting serial numbers via file upload directly on product edit', function () {
+    $admin = User::factory()->create(['is_approved' => true]);
+    $superadminRole = Role::firstOrCreate(['name' => 'superadmin', 'guard_name' => 'backend']);
+    $admin->assignRole($superadminRole);
+
+    $product = Product::create([
+        'category_id' => $this->category->id,
+        'name' => 'Kingston Fury Beast DDR5 64GB',
+        'slug' => 'kingston-fury-beast-ddr5-64gb',
+        'sku' => 'RAM-KNG-FURY-64G',
+        'price' => 320.00,
+        'stock_quantity' => 0,
+        'requires_serial_tracking' => true,
+    ]);
+
+    $csvContent = "serial_number\nKF-UPLOAD-001\nKF-UPLOAD-002\nKF-UPLOAD-003";
+    $file = UploadedFile::fake()->createWithContent('serials.csv', $csvContent);
+
+    $response = $this->actingAs($admin, 'backend')
+        ->post(route('admin.products.serials.store', $product->id), [
+            'warehouse_id' => $this->warehouse->id,
+            'file' => $file,
+        ]);
+
+    $response->assertSessionHas('success');
+    expect(SerialNumber::where('product_id', $product->id)->count())->toBe(3);
+});
+
+it('only adds serial numbers with status IN_STOCK to product stock quantity', function () {
+    $admin = User::factory()->create(['is_approved' => true]);
+    $superadminRole = Role::firstOrCreate(['name' => 'superadmin', 'guard_name' => 'backend']);
+    $admin->assignRole($superadminRole);
+
+    $product = Product::create([
+        'category_id' => $this->category->id,
+        'name' => 'RTX 4090 OC Gaming',
+        'slug' => 'rtx-4090-oc-gaming',
+        'sku' => 'GPU-4090-OC',
+        'price' => 1799.00,
+        'stock_quantity' => 0,
+        'requires_serial_tracking' => true,
+    ]);
+
+    // 2 IN_STOCK, 1 SHIPPED (sold), 1 DEFECTIVE_SCRAP, 1 RETURNED_RMA
+    SerialNumber::create([
+        'product_id' => $product->id,
+        'warehouse_id' => $this->warehouse->id,
+        'serial_number' => 'GPU-4090-001',
+        'status' => SerialNumber::STATUS_IN_STOCK,
+    ]);
+    SerialNumber::create([
+        'product_id' => $product->id,
+        'warehouse_id' => $this->warehouse->id,
+        'serial_number' => 'GPU-4090-002',
+        'status' => SerialNumber::STATUS_IN_STOCK,
+    ]);
+    SerialNumber::create([
+        'product_id' => $product->id,
+        'warehouse_id' => $this->warehouse->id,
+        'serial_number' => 'GPU-4090-003',
+        'status' => SerialNumber::STATUS_SHIPPED,
+    ]);
+    SerialNumber::create([
+        'product_id' => $product->id,
+        'warehouse_id' => $this->warehouse->id,
+        'serial_number' => 'GPU-4090-004',
+        'status' => SerialNumber::STATUS_DEFECTIVE_SCRAP,
+    ]);
+    SerialNumber::create([
+        'product_id' => $product->id,
+        'warehouse_id' => $this->warehouse->id,
+        'serial_number' => 'GPU-4090-005',
+        'status' => SerialNumber::STATUS_RETURNED_RMA,
+    ]);
+
+    // Sync via model
+    $product->syncTotalStock();
+    expect($product->fresh()->stock_quantity)->toBe(2);
+
+    // Update via ProductController
+    $response = $this->actingAs($admin, 'backend')
+        ->put(route('admin.products.update', $product->id), [
+            'category_id' => $this->category->id,
+            'name' => 'RTX 4090 OC Gaming (Updated)',
+            'sku' => 'GPU-4090-OC',
+            'price' => 1799.00,
+            'stock_quantity' => 99, // Should be ignored and strictly match IN_STOCK count (2)
+            'low_stock_threshold' => 1,
+            'requires_serial_tracking' => true,
+        ]);
+
+    $response->assertRedirect(route('admin.products.index'));
+    expect($product->fresh()->stock_quantity)->toBe(2);
+
+    // Also check edit view displays 2 in stock out of 5 total
+    $editView = $this->actingAs($admin, 'backend')->get(route('admin.products.edit', $product->id));
+    $editView->assertOk();
+    $editView->assertSee('2</span> in stock', false);
+    $editView->assertSee('5</span> total', false);
 });
