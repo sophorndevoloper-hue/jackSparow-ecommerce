@@ -76,3 +76,16 @@ test('admins can logout', function () {
     $this->assertGuest('backend');
     $response->assertRedirect(route('admin.login'));
 });
+
+test('backend user credentials cannot authenticate using customer login screen', function () {
+    $admin = User::factory()->create(['password' => 'adminpassword123']);
+    $admin->assignRole(Role::findByName('admin', 'backend'));
+
+    $response = $this->post('/login', [
+        'email' => $admin->email,
+        'password' => 'adminpassword123',
+    ]);
+
+    $response->assertSessionHasErrors('email');
+    $this->assertGuest('frontend');
+});

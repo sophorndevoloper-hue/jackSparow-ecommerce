@@ -35,18 +35,12 @@ class CustomerRegisterController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:frontend_users,email'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'phone' => ['nullable', 'string', 'max:30'],
-            'city' => ['nullable', 'string', 'max:100'],
-            'address' => ['nullable', 'string', 'max:255'],
         ]);
 
         $frontendUser = FrontendUser::create([
             'name' => $request->input('name'),
             'email' => $request->input('email'),
             'password' => Hash::make($request->input('password')),
-            'phone' => $request->input('phone'),
-            'city' => $request->input('city'),
-            'address' => $request->input('address'),
             'customer_type' => 'simple',
             'orders_count' => 0,
             'total_spent' => 0.00,
@@ -61,7 +55,7 @@ class CustomerRegisterController extends Controller
 
         Auth::guard('frontend')->login($frontendUser);
 
-        return redirect()->route('home')
+        return redirect()->intended(route('home'))
             ->with('success', "Welcome to JackSparow TECH, {$frontendUser->name}! Your customer account is ready.");
     }
 }

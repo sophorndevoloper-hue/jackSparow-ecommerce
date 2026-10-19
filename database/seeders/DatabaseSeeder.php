@@ -19,9 +19,18 @@ class DatabaseSeeder extends Seeder
             WarehouseSeeder::class,
             CustomerGroupSeeder::class,
             SpecificationAttributeSeeder::class,
-            MakeSeeder::class,
             ComputerPartSeeder::class,
+            ShippingMethodSeeder::class,
+            PaymentMethodSeeder::class,
+            DeliveryAgentSeeder::class,
+            StaffSeeder::class,
             BackendMenuSeeder::class,
+            UserActivitySeeder::class,
+            WebsiteSettingSeeder::class,
+            StorefrontMenuSeeder::class,
+            ProductImageSeeder::class,
+            ProductCollectionSeeder::class,
+            StorefrontProductSeeder::class,
         ]);
     }
 }

@@ -8,6 +8,9 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -67,6 +70,103 @@ class BackendMenuController extends Controller
     }
 
     /**
+     * Show the form for creating a new menu.
+     */
+    public function create(): View
+    {
+        $availablePermissions = Permission::where('guard_name', 'backend')->orderBy('name')->get();
+        $roles = Role::where('guard_name', 'backend')->with('permissions')->get();
+
+        // Potential parent menus: top-level menus
+        $parentMenus = AdminMenu::where(function ($query) {
+            $query->whereNull('parent_slug')->orWhere('parent_slug', '');
+        })
+            ->ordered()
+            ->get();
+
+        $defaultSortOrder = (AdminMenu::max('sort_order') ?? 0) + 1;
+
+        return view('backend.settings.menus.create', compact('availablePermissions', 'roles', 'parentMenus', 'defaultSortOrder'));
+    }
+
+    /**
+     * Store a newly created menu in storage.
+     */
+    public function store(Request $request): RedirectResponse
+    {
+        // Normalize empty parent_slug to null
+        $request->merge([
+            'parent_slug' => $request->filled('parent_slug') ? $request->input('parent_slug') : null,
+        ]);
+
+        // Auto-generate base slug from title if not explicitly provided
+        if (! $request->filled('slug') && $request->filled('title')) {
+            $baseSlug = Str::slug($request->input('title'), '_');
+            $request->merge(['slug' => $baseSlug ?: 'menu_'.time()]);
+        }
+
+        $validated = $request->validate([
+            'title' => [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('admin_menus', 'title')->where(function ($query) use ($request) {
+                    $parent = $request->input('parent_slug');
+
+                    return $parent ? $query->where('parent_slug', $parent) : $query->whereNull('parent_slug');
+                }),
+            ],
+            'slug' => ['required', 'string', 'max:100', 'unique:admin_menus,slug'],
+            'parent_slug' => ['nullable', 'string', 'max:100', 'exists:admin_menus,slug'],
+            'route_name' => ['nullable', 'string', 'max:255'],
+            'section' => ['nullable', 'string', 'max:100'],
+            'icon' => ['required', 'string', 'max:50'],
+            'view_permission' => ['nullable', 'string', 'max:100'],
+            'sort_order' => ['required', 'integer', 'min:0', 'max:9999'],
+            'is_active' => ['nullable', 'boolean'],
+        ], [
+            'title.unique' => "A menu with the title ':input' already exists under the selected parent menu.",
+            'slug.unique' => "A menu with the unique identifier (slug) ':input' already exists.",
+        ]);
+
+        $validated['is_active'] = $request->boolean('is_active', true);
+        $validated['parent_slug'] = ! empty($validated['parent_slug']) ? $validated['parent_slug'] : null;
+
+        // Keep or inherit section so database integrity is preserved
+        if (empty($validated['section'])) {
+            if ($validated['parent_slug']) {
+                $parent = AdminMenu::where('slug', $validated['parent_slug'])->first();
+                $validated['section'] = $parent?->section ?? 'Main';
+            } else {
+                $validated['section'] = 'Main';
+            }
+        }
+
+        // Configure default actions if route is specified
+        if (! empty($validated['route_name'])) {
+            $validated['actions'] = [
+                [
+                    'name' => 'View',
+                    'action_type' => 'view',
+                    'route_name' => $validated['route_name'],
+                    'permission' => $validated['view_permission'] ?? null,
+                ],
+            ];
+        } else {
+            $validated['actions'] = [];
+        }
+
+        $menu = DB::transaction(function () use ($validated) {
+            return AdminMenu::create($validated);
+        });
+
+        AdminMenu::flushCache();
+
+        return redirect()->route('admin.menus.index')
+            ->with('success', "Menu '{$menu->title}' created successfully.");
+    }
+
+    /**
      * Show the form for editing the specified menu.
      */
     public function edit(AdminMenu $menu): View
@@ -74,7 +174,15 @@ class BackendMenuController extends Controller
         $availablePermissions = Permission::where('guard_name', 'backend')->orderBy('name')->get();
         $roles = Role::where('guard_name', 'backend')->with('permissions')->get();
 
-        return view('backend.settings.menus.edit', compact('menu', 'availablePermissions', 'roles'));
+        // Potential parent menus: top-level menus excluding this menu itself
+        $parentMenus = AdminMenu::where('id', '!=', $menu->id)
+            ->where(function ($query) {
+                $query->whereNull('parent_slug')->orWhere('parent_slug', '');
+            })
+            ->ordered()
+            ->get();
+
+        return view('backend.settings.menus.edit', compact('menu', 'availablePermissions', 'roles', 'parentMenus'));
     }
 
     /**
@@ -82,10 +190,16 @@ class BackendMenuController extends Controller
      */
     public function update(Request $request, AdminMenu $menu): RedirectResponse
     {
+        // Normalize empty parent_slug to null
+        $request->merge([
+            'parent_slug' => $request->filled('parent_slug') ? $request->input('parent_slug') : null,
+        ]);
+
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:100'],
+            'parent_slug' => ['nullable', 'string', 'max:100', 'exists:admin_menus,slug'],
             'route_name' => ['nullable', 'string', 'max:255'],
-            'section' => ['required', 'string', 'max:100'],
+            'section' => ['nullable', 'string', 'max:100'],
             'icon' => ['required', 'string', 'max:50'],
             'view_permission' => ['nullable', 'string', 'max:100'],
             'sort_order' => ['required', 'integer', 'min:0', 'max:9999'],
@@ -93,11 +207,138 @@ class BackendMenuController extends Controller
         ]);
 
         $validated['is_active'] = $request->boolean('is_active');
+        $validated['parent_slug'] = ! empty($validated['parent_slug']) ? $validated['parent_slug'] : null;
+
+        // Prevent setting itself as parent
+        if ($validated['parent_slug'] && $validated['parent_slug'] === $menu->slug) {
+            return back()->withErrors(['parent_slug' => 'A menu cannot be its own parent.'])->withInput();
+        }
+
+        // Prevent setting a parent if this menu has children (to maintain a clean 2-level hierarchy)
+        if ($validated['parent_slug'] && AdminMenu::where('parent_slug', $menu->slug)->exists()) {
+            return back()->withErrors(['parent_slug' => 'This menu is currently a parent group with sub-items. Please reassign its child menus before assigning it to a parent.'])->withInput();
+        }
+
+        // Keep or inherit section so database integrity is preserved
+        if (empty($validated['section'])) {
+            if ($validated['parent_slug']) {
+                $parent = AdminMenu::where('slug', $validated['parent_slug'])->first();
+                $validated['section'] = $parent?->section ?? $menu->section ?? 'Main';
+            } else {
+                $validated['section'] = $menu->section ?? 'Main';
+            }
+        }
+
+        // Normalize route_name
+        $validated['route_name'] = ! empty($validated['route_name']) ? $validated['route_name'] : null;
+
+        // If route is cleared, clear actions so no active route targets remain
+        if (empty($validated['route_name'])) {
+            $validated['actions'] = [];
+        } else {
+            // Update or initialize actions
+            if (empty($menu->actions)) {
+                $validated['actions'] = [
+                    [
+                        'name' => 'View',
+                        'action_type' => 'view',
+                        'route_name' => $validated['route_name'],
+                        'permission' => $validated['view_permission'] ?? null,
+                    ],
+                ];
+            } else {
+                $actions = $menu->actions;
+                $hasView = false;
+                foreach ($actions as &$act) {
+                    if (($act['action_type'] ?? '') === 'view') {
+                        $act['route_name'] = $validated['route_name'];
+                        if (isset($validated['view_permission'])) {
+                            $act['permission'] = $validated['view_permission'];
+                        }
+                        $hasView = true;
+                    }
+                }
+                if (! $hasView) {
+                    $actions[] = [
+                        'name' => 'View',
+                        'action_type' => 'view',
+                        'route_name' => $validated['route_name'],
+                        'permission' => $validated['view_permission'] ?? null,
+                    ];
+                }
+                $validated['actions'] = $actions;
+            }
+        }
 
         $menu->update($validated);
 
         return redirect()->route('admin.menus.index')
             ->with('success', "Menu '{$menu->title}' updated successfully.");
+    }
+
+    /**
+     * Remove the specified menu from storage.
+     */
+    public function destroy(Request $request, AdminMenu $menu): RedirectResponse|JsonResponse
+    {
+        // 1. Prevent deleting protected core system components
+        if (AdminMenu::isProtected($menu)) {
+            $msg = "The '{$menu->title}' menu is a core system component and cannot be deleted.";
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => $msg], 422);
+            }
+
+            return back()->with('error', $msg);
+        }
+
+        // 2. Prevent deleting menu if it still has an active route target
+        if (! empty($menu->route_name)) {
+            $msg = "Cannot delete menu '{$menu->title}' because it has an active system route ('{$menu->route_name}'). Please edit the menu to remove/delete the route target before deleting.";
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => $msg], 422);
+            }
+
+            return back()->with('error', $msg);
+        }
+
+        // Check if actions contain any active route targets
+        $hasActionRoutes = collect($menu->actions ?? [])->contains(fn ($act) => ! empty($act['route_name']));
+        if ($hasActionRoutes) {
+            $msg = "Cannot delete menu '{$menu->title}' because it contains associated action routes. Please edit the menu to clear action routes before deleting.";
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => $msg], 422);
+            }
+
+            return back()->with('error', $msg);
+        }
+
+        // 3. Prevent deleting if it contains child sub-menus
+        $childCount = AdminMenu::where('parent_slug', $menu->slug)->count();
+        if ($childCount > 0) {
+            $msg = "Cannot delete menu '{$menu->title}' because it contains {$childCount} sub-menu(s). Please reassign or delete its child menus first.";
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => $msg], 422);
+            }
+
+            return back()->with('error', $msg);
+        }
+
+        $title = $menu->title;
+        $menu->delete();
+
+        // Clean up user session disabled list if present
+        $disabled = session('admin_disabled_menus', []);
+        if (in_array($menu->id, $disabled, true) || in_array($menu->slug, $disabled, true)) {
+            session(['admin_disabled_menus' => array_values(array_filter($disabled, fn ($id) => $id !== $menu->id && $id !== $menu->slug))]);
+        }
+
+        $msg = "Menu '{$title}' deleted successfully.";
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['success' => true, 'message' => $msg]);
+        }
+
+        return redirect()->route('admin.menus.index')->with('success', $msg);
     }
 
     /**

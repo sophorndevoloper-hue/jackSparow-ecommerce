@@ -2,6 +2,7 @@
 
 namespace App\DataTables;
 
+use App\DataTables\Concerns\HasStandardActions;
 use App\Models\Category;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Yajra\DataTables\EloquentDataTable;
@@ -11,6 +12,8 @@ use Yajra\DataTables\Services\DataTable;
 
 class CategoryDataTable extends DataTable
 {
+    use HasStandardActions;
+
     /**
      * Build the DataTable class.
      *
@@ -37,27 +40,11 @@ class CategoryDataTable extends DataTable
             ->addColumn('parent', fn (Category $c) => $c->parent ? '<span class="badge bg-light text-body border">'.e($c->parent->name).'</span>' : '<span class="badge bg-secondary-subtle text-muted">Root Category</span>')
             ->editColumn('products_count', fn (Category $c) => '<span class="badge bg-primary-subtle text-primary border border-primary-subtle">'.(int) $c->products_count.' Items</span>')
             ->editColumn('is_active', fn (Category $c) => $c->is_active ? '<span class="badge bg-success-subtle text-success border border-success-subtle">Active</span>' : '<span class="badge bg-secondary">Inactive</span>')
-            ->addColumn('action', function (Category $c) {
-                $editUrl = route('admin.categories.edit', $c->id);
-                $deleteUrl = route('admin.categories.destroy', $c->id);
-                $csrf = csrf_field();
-                $method = method_field('DELETE');
-
-                return '
-                    <div class="btn-group btn-group-sm">
-                        <a href="'.$editUrl.'" class="btn btn-outline-secondary" title="Edit Category">
-                            <i class="bi bi-pencil"></i>
-                        </a>
-                        <form action="'.$deleteUrl.'" method="POST" class="d-inline" onsubmit="return confirm(\'Delete this category?\');">
-                            '.$csrf.'
-                            '.$method.'
-                            <button type="submit" class="btn btn-outline-danger" title="Delete Category">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </form>
-                    </div>
-                ';
-            })
+            ->addColumn('action', fn (Category $c) => $this->renderActionButtons(
+                route('admin.categories.edit', $c->id),
+                route('admin.categories.destroy', $c->id),
+                'category'
+            ))
             ->editColumn('updated_at', fn (Category $c) => $c->updated_at?->format('Y-m-d H:i') ?? '-')
             ->rawColumns(['name', 'parent', 'products_count', 'is_active', 'action'])
             ->setRowId('id');

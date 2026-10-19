@@ -11,6 +11,41 @@
             </div>
             <div class="heading-actions d-flex gap-2">
                 <div class="dropdown">
+                    <button type="button" class="btn btn-outline-info btn-sm dropdown-toggle d-inline-flex align-items-center gap-1" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-printer"></i> Print Warranties
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: 13px;">
+                        <li><h6 class="dropdown-header text-uppercase fw-bold" style="font-size: 11px;">Warranty Certificates</h6></li>
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.serial-numbers.warranties.print', request()->query()) }}" target="_blank">
+                                <i class="bi bi-funnel text-primary fs-6"></i>
+                                <div>
+                                    <div class="fw-semibold">Print Current Filtered Warranties</div>
+                                    <span class="text-muted" style="font-size: 11px;">Print certificates matching current search filters</span>
+                                </div>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.serial-numbers.warranties.print', ['status' => 'IN_STOCK']) }}" target="_blank">
+                                <i class="bi bi-box-seam text-success fs-6"></i>
+                                <div>
+                                    <div class="fw-semibold">Print All In-Stock Warranties</div>
+                                    <span class="text-muted" style="font-size: 11px;">Factory certificates for warehouse stock</span>
+                                </div>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.serial-numbers.warranties.print', ['status' => 'SHIPPED']) }}" target="_blank">
+                                <i class="bi bi-truck text-info fs-6"></i>
+                                <div>
+                                    <div class="fw-semibold">Print Shipped / Active Warranties</div>
+                                    <span class="text-muted" style="font-size: 11px;">Warranty documents for dispatched orders</span>
+                                </div>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="dropdown">
                     <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="bi bi-file-earmark-arrow-down me-1"></i> Download Templates
                     </button>
@@ -149,7 +184,10 @@
                         @forelse($serialNumbers as $sn)
                             <tr>
                                 <td>
-                                    <span class="badge bg-secondary-subtle text-body-secondary border-0 font-monospace">{{ $sn->serial_number }}</span>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <input type="checkbox" class="form-check-input serial-select-cb m-0 cursor-pointer" value="{{ $sn->id }}" title="Select for batch warranty printing">
+                                        <span class="badge bg-secondary-subtle text-body-secondary border-0 font-monospace">{{ $sn->serial_number }}</span>
+                                    </div>
                                 </td>
                                 <td>
                                     <a href="{{ route('admin.products.edit', $sn->product_id) }}" class="fw-semibold text-body-emphasis text-decoration-none">
@@ -195,6 +233,9 @@
                                 </td>
                                 <td class="text-end">
                                     <div class="d-flex align-items-center justify-content-end gap-1">
+                                        <a href="{{ route('admin.serial-numbers.warranty', $sn->id) }}" target="_blank" class="btn-ghost text-info" title="Print Hardware Warranty Certificate">
+                                            <i class="bi bi-printer"></i>
+                                        </a>
                                         @can('edit products')
                                             <button type="button" class="btn-ghost text-primary" data-bs-toggle="modal" data-bs-target="#editSerialModal{{ $sn->id }}" title="Update Serial">
                                                 <i class="bi bi-pencil"></i>
@@ -279,6 +320,22 @@
             <div class="p-3 border-top">
                 {{ $serialNumbers->links() }}
             </div>
+        </div>
+    </div>
+
+    <!-- Floating Batch Print Bar -->
+    <div id="batchPrintBar" class="position-fixed bottom-0 start-50 translate-middle-x mb-4 px-4 py-3 bg-dark text-white rounded-pill shadow-lg d-none align-items-center gap-3 border border-secondary" style="z-index: 1050;">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-patch-check-fill text-warning fs-5"></i>
+            <span class="small font-monospace"><strong id="selectedSerialCount" class="text-warning">0</strong> serials selected</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" id="btnPrintSelectedWarranties" class="btn btn-warning btn-sm rounded-pill fw-semibold px-3 shadow-xs">
+                <i class="bi bi-printer-fill me-1"></i> Print Warranties
+            </button>
+            <button type="button" id="btnClearSerialSelection" class="btn btn-outline-light btn-sm rounded-pill px-2 py-0" style="font-size: 11px;">
+                Clear
+            </button>
         </div>
     </div>
 
@@ -1222,6 +1279,55 @@ SN-RTX4090-003" autocomplete="off">{{ $errors->has('serials_text') ? old('serial
                     manualSerialsInput.value = '';
                 }
             @endif
+
+            // Batch Warranty Print Handler
+            const batchPrintBar = document.getElementById('batchPrintBar');
+            const selectedSerialCount = document.getElementById('selectedSerialCount');
+            const btnPrintSelected = document.getElementById('btnPrintSelectedWarranties');
+            const btnClearSelection = document.getElementById('btnClearSerialSelection');
+
+            function getSelectedSerialIds() {
+                const checkboxes = document.querySelectorAll('.serial-select-cb:checked');
+                return Array.from(checkboxes).map(cb => cb.value);
+            }
+
+            function updateBatchPrintBar() {
+                const selectedIds = getSelectedSerialIds();
+                if (selectedIds.length > 0) {
+                    if (selectedSerialCount) selectedSerialCount.textContent = selectedIds.length;
+                    if (batchPrintBar) {
+                        batchPrintBar.classList.remove('d-none');
+                        batchPrintBar.classList.add('d-flex');
+                    }
+                } else {
+                    if (batchPrintBar) {
+                        batchPrintBar.classList.add('d-none');
+                        batchPrintBar.classList.remove('d-flex');
+                    }
+                }
+            }
+
+            document.addEventListener('change', function(e) {
+                if (e.target && e.target.classList.contains('serial-select-cb')) {
+                    updateBatchPrintBar();
+                }
+            });
+
+            if (btnPrintSelected) {
+                btnPrintSelected.addEventListener('click', function() {
+                    const ids = getSelectedSerialIds();
+                    if (ids.length === 0) return;
+                    const url = "{{ route('admin.serial-numbers.warranties.print') }}?ids=" + encodeURIComponent(ids.join(','));
+                    window.open(url, '_blank');
+                });
+            }
+
+            if (btnClearSelection) {
+                btnClearSelection.addEventListener('click', function() {
+                    document.querySelectorAll('.serial-select-cb:checked').forEach(cb => cb.checked = false);
+                    updateBatchPrintBar();
+                });
+            }
         });
     </script>
 </x-app-layout>

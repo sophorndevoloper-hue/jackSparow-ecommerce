@@ -1,8 +1,10 @@
 <x-guest-layout>
     <section class="auth-card">
         <a class="auth-brand" href="{{ route('admin.dashboard') }}">
-            <span class="brand-icon"><i class="bi bi-cpu-fill" aria-hidden="true"></i></span>
-            <span><strong>JackSparow TECH</strong><small>Admin Portal &bull; Staff Workspace</small></span>
+            <span class="brand-icon p-1" style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.75), rgba(15, 23, 42, 0.95)) !important; border: 1px solid rgba(56, 189, 248, 0.3) !important; border-radius: 10px; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25);">
+                <img src="{{ asset('assets/images/brand/logo/jacksparrow-icon.png') }}" alt="JackSparrow Logo" style="width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.35));">
+            </span>
+            <span><strong>JACK<span style="color: #38bdf8;">SPARROW</span></strong><small>B2B Computer Parts &bull; Staff Workspace</small></span>
         </a>
         <!-- <div class="auth-visual">
             <img src="{{ asset('assets/images/png/dasher-ui-bootstrap-5.jpg') }}" alt="adminHMD dashboard interface">

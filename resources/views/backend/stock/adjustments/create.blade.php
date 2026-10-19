@@ -7,10 +7,12 @@
             transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
             font-size: 11.5px;
         }
+
         .serial-chip:hover {
             border-color: #0d6efd;
             background-color: rgba(13, 110, 253, 0.05);
         }
+
         .serial-chip.is-selected {
             background-color: rgba(220, 53, 69, 0.1) !important;
             border-color: #dc3545 !important;
@@ -18,6 +20,7 @@
             font-weight: 600;
             box-shadow: 0 0 0 1px rgba(220, 53, 69, 0.25);
         }
+
         .correction-chip.is-selected {
             background-color: rgba(25, 135, 84, 0.1) !important;
             border-color: #198754 !important;
@@ -25,11 +28,13 @@
             font-weight: 600;
             box-shadow: 0 0 0 1px rgba(25, 135, 84, 0.25);
         }
+
         .correction-chip:not(.is-selected) {
             background-color: rgba(220, 53, 69, 0.06) !important;
             border-color: rgba(220, 53, 69, 0.4) !important;
             color: #dc3545 !important;
         }
+
         .serial-chips-grid {
             max-height: 160px;
             overflow-y: auto;
@@ -38,25 +43,31 @@
             padding: 8px;
             background-color: var(--bs-body-bg, #ffffff);
         }
+
         .serial-dropdown-menu {
             background-color: var(--bs-body-bg, #ffffff);
             border-color: var(--bs-border-color, #dee2e6);
         }
+
         .product-dropdown-item,
         .serial-dropdown-item {
             cursor: pointer;
             transition: background-color 0.15s ease;
         }
+
         .product-dropdown-item:hover,
         .serial-dropdown-item:hover {
             background-color: rgba(13, 110, 253, 0.08);
         }
+
         .serial-dropdown-item.is-selected {
             background-color: rgba(220, 53, 69, 0.06);
         }
+
         .cursor-pointer {
             cursor: pointer;
         }
+
         html[data-theme="dark"] .serial-dropdown-menu,
         html[data-bs-theme="dark"] .serial-dropdown-menu,
         html[data-theme="dark"] .product-dropdown-menu,
@@ -64,6 +75,7 @@
             background-color: #0f172a;
             border-color: #334155;
         }
+
         html[data-theme="dark"] .serial-dropdown-item:hover,
         html[data-bs-theme="dark"] .serial-dropdown-item:hover,
         html[data-theme="dark"] .product-dropdown-item:hover,
@@ -79,7 +91,8 @@
                 <div>
                     <p class="eyebrow mb-1">Inventory Control</p>
                     <h1 class="h3 mb-1">New Stock Adjustment</h1>
-                    <p class="text-muted mb-0">Record physical stock counts, write off damages, or correct inventory counts.</p>
+                    <p class="text-muted mb-0">Record physical stock counts, write off damages, or correct inventory
+                        counts.</p>
                 </div>
             </div>
             <div class="heading-actions">
@@ -89,17 +102,32 @@
             </div>
         </div>
 
-        @if($errors->any())
-            <div class="alert alert-danger mt-3">
-                <ul class="mb-0">
-                    @foreach($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
+        @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show mt-3 shadow-sm" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
         @endif
 
-        <form action="{{ route('admin.stock.adjustments.store') }}" method="POST" class="mt-3">
+        @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show mt-3 shadow-sm" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        @endif
+
+        @if($errors->any())
+        <div class="alert alert-danger alert-dismissible fade show mt-3 shadow-sm" role="alert">
+            <ul class="mb-0 ps-3">
+                @foreach($errors->all() as $error)
+                <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        @endif
+
+        <form action="{{ route('admin.stock.adjustments.store') }}" method="POST" id="stockAdjustmentForm" class="mt-3">
             @csrf
 
             <div class="row g-3">
@@ -113,9 +141,10 @@
                             <label class="form-label fw-bold small">Target Warehouse *</label>
                             <select name="warehouse_id" id="warehouseSelect" required class="form-select">
                                 @foreach($warehouses as $wh)
-                                    <option value="{{ $wh->id }}" {{ (string)$selectedWarehouseId === (string)$wh->id ? 'selected' : '' }}>
-                                        {{ $wh->name }} ({{ $wh->code }})
-                                    </option>
+                                <option value="{{ $wh->id }}" {{ (string)$selectedWarehouseId===(string)$wh->id ?
+                                    'selected' : '' }}>
+                                    {{ $wh->name }} ({{ $wh->code }})
+                                </option>
                                 @endforeach
                             </select>
                         </div>
@@ -123,10 +152,14 @@
                         <!-- Type -->
                         <div class="mb-3">
                             <label class="form-label fw-bold small">Adjustment Type *</label>
-                            <select name="type" id="adjustmentType" required class="form-select" onchange="updateQtyLabels(this.value)">
-                                <option value="addition" {{ old('type') === 'addition' ? 'selected' : '' }}>Stock Addition (+) — Add stock units</option>
-                                <option value="subtraction" {{ old('type') === 'subtraction' ? 'selected' : '' }}>Stock Subtraction (-) — Deduct units</option>
-                                <option value="correction" {{ old('type') === 'correction' ? 'selected' : '' }}>Count Correction (=) — Exact counted quantity</option>
+                            <select name="type" id="adjustmentType" required class="form-select"
+                                onchange="updateQtyLabels(this.value)">
+                                <option value="addition" {{ old('type')==='addition' ? 'selected' : '' }}>Stock Addition
+                                    (+) — Add stock units</option>
+                                <option value="subtraction" {{ old('type')==='subtraction' ? 'selected' : '' }}>Stock
+                                    Subtraction (-) — Deduct units</option>
+                                <option value="correction" {{ old('type')==='correction' ? 'selected' : '' }}>Count
+                                    Correction (=) — Exact counted quantity</option>
                             </select>
                         </div>
 
@@ -146,7 +179,8 @@
                         <!-- Notes -->
                         <div class="mb-4">
                             <label class="form-label fw-bold small">Notes / Audit Remarks</label>
-                            <textarea name="notes" rows="3" class="form-control" placeholder="Optional audit memo or explanation...">{{ old('notes') }}</textarea>
+                            <textarea name="notes" rows="3" class="form-control"
+                                placeholder="Optional audit memo or explanation...">{{ old('notes') }}</textarea>
                         </div>
 
                         <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">
@@ -161,7 +195,8 @@
                         <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
                             <div>
                                 <h5 class="mb-0 text-dark fw-bold">Hardware Components to Adjust</h5>
-                                <small class="text-muted">Select components to scan, write, upload files, or choose existing serial numbers to adjust stock.</small>
+                                <small class="text-muted">Select components to scan, write, upload files, or choose
+                                    existing serial numbers to adjust stock.</small>
                             </div>
                             <button type="button" class="btn btn-outline-primary btn-sm" onclick="addProductRow()">
                                 <i class="bi bi-plus-lg me-1"></i> Add Product
@@ -172,7 +207,8 @@
                             <!-- Populated dynamically via JS -->
                         </div>
 
-                        <button type="button" class="btn btn-outline-secondary btn-sm w-100 mt-2 py-2" onclick="addProductRow()">
+                        <button type="button" class="btn btn-outline-secondary btn-sm w-100 mt-2 py-2"
+                            onclick="addProductRow()">
                             <i class="bi bi-plus-circle me-1"></i> Add Another Component
                         </button>
                     </div>
@@ -183,7 +219,7 @@
 
     <script>
         const productsList = @json($productsData ?? []);
-        const warehousesList = @json($warehouses->map(fn($w) => ['id' => $w->id, 'name' => $w->name, 'code' => $w->code]));
+        const warehousesList = @json($warehouses -> map(fn($w) => ['id' => $w -> id, 'name' => $w -> name, 'code' => $w -> code]));
         const serialsFetchUrl = "{{ route('admin.stock.adjustments.product-serials') }}";
         const parseFileUrl = "{{ route('admin.serial-numbers.parse-preview') }}";
         const csrfToken = "{{ csrf_token() }}";
@@ -199,9 +235,9 @@
         function createProductRowHtml(index, selectedProductId = '') {
             return `
                 <div class="product-row border p-3 rounded bg-light-subtle mb-3 shadow-xs" data-row-index="${index}">
-                    <div class="row g-2 align-items-center">
-                        <!-- Product Component: Full Width Selection Combobox -->
-                        <div class="col-11">
+                    <div class="row g-2 align-items-start">
+                        <!-- Product Component: Selection Combobox -->
+                        <div class="col-12 col-md-7">
                             <label class="form-label small fw-bold text-dark mb-1">Product Component *</label>
                             <div class="product-picker-wrapper position-relative">
                                 <div class="input-group input-group-sm">
@@ -225,15 +261,28 @@
                             <div class="selected-product-badge mt-1 d-none"></div>
                         </div>
 
+                        <!-- Visible Adjustment Quantity Input -->
+                        <div class="col-10 col-md-4">
+                            <label class="form-label small fw-bold text-dark mb-1 qty-field-label">Adjustment Quantity *</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text qty-addon-icon"><i class="bi bi-hash"></i></span>
+                                <input type="number" 
+                                       name="products[${index}][quantity]" 
+                                       class="form-control form-control-sm qty-input fw-bold font-monospace" 
+                                       min="1" 
+                                       value="1" 
+                                       placeholder="1" 
+                                       required>
+                                <span class="input-group-text small text-muted">units</span>
+                            </div>
+                        </div>
+
                         <!-- Delete Button -->
-                        <div class="col-1 text-end pt-3">
+                        <div class="col-2 col-md-1 text-end pt-4">
                             <button type="button" class="btn btn-outline-danger btn-sm p-1" onclick="removeProductRow(this)" title="Remove Component">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </div>
-
-                        <!-- Hidden Quantity Input (automatically managed by serial numbers) -->
-                        <input type="hidden" name="products[${index}][quantity]" class="qty-input" value="0">
 
                         <!-- Dynamic Serial Numbers Box (Addition scanner/uploader or Subtraction picker) -->
                         <div class="col-12 mt-2 pt-2 border-top border-light-subtle serial-box">
@@ -338,18 +387,18 @@
                 },
                 body: formData
             })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success && data.serials && data.serials.length > 0) {
-                    onComplete(data.serials, `Loaded ${data.serials.length} serials from ${file.name}`);
-                } else {
-                    statusSpan.innerHTML = `<span class="text-danger small"><i class="bi bi-exclamation-circle me-1"></i>${escapeHtml(data.message || 'No serial numbers found in file.')}</span>`;
-                }
-            })
-            .catch(err => {
-                console.error(err);
-                statusSpan.innerHTML = `<span class="text-danger small"><i class="bi bi-exclamation-circle me-1"></i>Failed to parse file on server.</span>`;
-            });
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.serials && data.serials.length > 0) {
+                        onComplete(data.serials, `Loaded ${data.serials.length} serials from ${file.name}`);
+                    } else {
+                        statusSpan.innerHTML = `<span class="text-danger small"><i class="bi bi-exclamation-circle me-1"></i>${escapeHtml(data.message || 'No serial numbers found in file.')}</span>`;
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    statusSpan.innerHTML = `<span class="text-danger small"><i class="bi bi-exclamation-circle me-1"></i>Failed to parse file on server.</span>`;
+                });
         }
 
         function renderSerialBox(rowEl) {
@@ -362,20 +411,64 @@
             const productId = hiddenIdInput ? hiddenIdInput.value : '';
             const serialBox = rowEl.querySelector('.serial-box');
             const qtyInput = rowEl.querySelector('.qty-input');
+            const qtyLabel = rowEl.querySelector('.qty-field-label');
 
             if (!serialBox) return;
 
-            if (type === 'subtraction') {
-                if (!productId) {
-                    serialBox.innerHTML = `
-                        <div class="p-2 border rounded bg-body-tertiary text-muted small fst-italic">
-                            <i class="bi bi-info-circle me-1 text-primary"></i> Select a product component above to view and select available serial numbers in this warehouse to deduct.
-                        </div>
-                        <textarea name="products[${index}][serials]" class="serials-textarea d-none"></textarea>
-                    `;
-                    qtyInput.value = 0;
-                    return;
+            // Update field label according to adjustment type
+            if (qtyLabel) {
+                if (type === 'addition') {
+                    qtyLabel.innerHTML = '<i class="bi bi-plus-circle text-success me-1"></i>Add Quantity (+) *';
+                } else if (type === 'subtraction') {
+                    qtyLabel.innerHTML = '<i class="bi bi-dash-circle text-danger me-1"></i>Deduct Quantity (-) *';
+                } else {
+                    qtyLabel.innerHTML = '<i class="bi bi-equal text-primary me-1"></i>Counted Quantity (=) *';
                 }
+            }
+
+            if (!productId) {
+                qtyInput.readOnly = false;
+                qtyInput.classList.remove('bg-body-secondary');
+                qtyInput.title = '';
+                serialBox.innerHTML = `
+                    <div class="p-2 border rounded bg-body-tertiary text-muted small fst-italic">
+                        <i class="bi bi-info-circle me-1 text-primary"></i> Select a product component above to adjust stock.
+                    </div>
+                    <textarea name="products[${index}][serials]" class="serials-textarea d-none"></textarea>
+                `;
+                return;
+            }
+
+            const currentProd = productsList.find(p => String(p.id) === String(productId));
+            const isSerialTracked = currentProd ? !!currentProd.serial_tracking : false;
+
+            if (!isSerialTracked) {
+                // Non-serialized bulk product: Quantity is open and directly editable!
+                qtyInput.readOnly = false;
+                qtyInput.classList.remove('bg-body-secondary');
+                qtyInput.title = 'Enter quantity directly for non-serialized component';
+                if (!qtyInput.value || qtyInput.value === '0') {
+                    qtyInput.value = '1';
+                }
+                serialBox.innerHTML = `
+                    <div class="alert alert-info py-2 px-3 mb-0 small d-flex align-items-center justify-content-between">
+                        <div>
+                            <i class="bi bi-box-seam me-2 text-info"></i>
+                            <span><strong>Bulk / Non-serialized Component:</strong> Stock is adjusted directly by entering the <strong>Adjustment Quantity</strong> above. Serial numbers are not required.</span>
+                        </div>
+                        <span class="badge bg-secondary-subtle text-body-secondary font-monospace">Non-serialized</span>
+                    </div>
+                    <textarea name="products[${index}][serials]" class="serials-textarea d-none"></textarea>
+                `;
+                return;
+            }
+
+            // Serialized product: Lock quantity input so it is strictly calculated from manufacturer serial numbers!
+            qtyInput.readOnly = true;
+            qtyInput.classList.add('bg-body-secondary');
+            qtyInput.title = 'Quantity is automatically calculated from manufacturer serial numbers entered';
+
+            if (type === 'subtraction') {
 
                 // If serials haven't been fetched yet for this (productId, currentWarehouseId)
                 if (!rowEl._loadedFor || rowEl._loadedFor.productId !== productId || rowEl._loadedFor.warehouseId !== currentWarehouseId) {
@@ -423,7 +516,7 @@
                             <div class="alert alert-warning py-2 px-3 mb-0 small d-flex align-items-center justify-content-between">
                                 <div>
                                     <i class="bi bi-exclamation-triangle-fill me-1 text-warning"></i>
-                                    <span>No in-stock serial numbers found for this product in <strong>${escapeHtml(currentWarehouseName)}</strong>.</span>
+                                    <span>No in-stock serial numbers recorded in <strong>${escapeHtml(currentWarehouseName)}</strong>. You can specify the numerical deduction quantity in the field above.</span>
                                 </div>
                                 <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 btn-refresh-serials" title="Refresh serials">
                                     <i class="bi bi-arrow-clockwise"></i>
@@ -432,7 +525,6 @@
                             <textarea name="products[${index}][serials]" class="serials-textarea d-none"></textarea>
                         </div>
                     `;
-                    qtyInput.value = 0;
 
                     const refreshBtn = serialBox.querySelector('.btn-refresh-serials');
                     if (refreshBtn) {
@@ -581,8 +673,8 @@
                             <span class="font-monospace ${isAdded ? 'fw-bold text-danger' : 'text-body-emphasis'}">
                                 <i class="bi bi-upc me-2 text-muted"></i>${escapeHtml(sn)}
                             </span>
-                            ${isAdded 
-                                ? '<span class="badge bg-danger-subtle text-danger small font-monospace"><i class="bi bi-check-lg me-1"></i>Selected (click to remove)</span>' 
+                            ${isAdded
+                                ? '<span class="badge bg-danger-subtle text-danger small font-monospace"><i class="bi bi-check-lg me-1"></i>Selected (click to remove)</span>'
                                 : '<span class="badge bg-secondary-subtle text-body-secondary small font-monospace"><i class="bi bi-plus me-1"></i>Select</span>'
                             }
                         `;
@@ -619,7 +711,7 @@
                             const query = (this.value || '').trim().toLowerCase();
                             if (!query) return;
                             const match = serials.find(s => s.serial_number.toLowerCase() === query) ||
-                                          serials.find(s => s.serial_number.toLowerCase().includes(query));
+                                serials.find(s => s.serial_number.toLowerCase().includes(query));
                             if (match) {
                                 toggleSerialInTextarea(match.serial_number);
                                 this.value = '';
@@ -841,204 +933,346 @@
                     return;
                 }
 
-                // Warehouse has existing serials -> render Count Correction Reconciler
+                // Warehouse has existing serials -> render Search/Select Combobox & Line-by-Line Textarea
                 serialBox.innerHTML = `
                     <div class="serial-correction-wrapper">
                         <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
-                            <div>
-                                <label class="form-label small fw-bold text-dark mb-0">
-                                    <i class="bi bi-sliders text-warning me-1"></i> Physical Count Reconciliation
-                                </label>
-                                <span class="text-muted small ms-1" style="font-size: 11px;">(Checked = Present on shelf; Unchecked = Removed as missing)</span>
-                            </div>
-                            <div class="d-flex align-items-center gap-1">
-                                <span class="badge bg-primary font-monospace serial-count-badge py-1 px-2" style="font-size: 12px;">
-                                    Count: = ${serials.length} units
+                            <div class="d-flex align-items-center gap-1 flex-wrap">
+                                <span class="badge bg-primary-subtle text-primary font-monospace small">
+                                    <i class="bi bi-sliders me-1"></i>Physical Counted Serials
                                 </span>
-                                <span class="badge bg-secondary font-monospace serial-remove-badge py-1 px-2" style="font-size: 12px;">
-                                    Removing: 0 units
-                                </span>
+                                <span class="text-muted small ms-1" style="font-size: 11px;">(${serials.length} units in ${escapeHtml(currentWarehouseName)})</span>
                             </div>
-                        </div>
-
-                        <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
-                            <div class="input-group input-group-sm" style="max-width: 220px;">
-                                <span class="input-group-text py-0"><i class="bi bi-funnel" style="font-size: 11px;"></i></span>
-                                <input type="text" class="form-control form-control-sm serial-filter-input" placeholder="Filter serials..." autocomplete="off">
-                            </div>
-                            <button type="button" class="btn btn-outline-success btn-sm py-0 px-2 btn-keep-all" style="font-size: 12px;" title="Keep all units in stock">
-                                <i class="bi bi-check-all me-1"></i> Keep All (${serials.length})
-                            </button>
-                            <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 btn-remove-all" style="font-size: 12px;" title="Uncheck all (remove all)">
-                                <i class="bi bi-x-lg me-1"></i> Remove All
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-1 btn-refresh-serials ms-auto" title="Refresh serials from warehouse">
-                                <i class="bi bi-arrow-clockwise"></i>
-                            </button>
-                        </div>
-
-                        <div class="serial-chips-grid d-flex flex-wrap gap-1 mb-2">
-                            ${serials.map(s => `
-                                <label class="serial-chip correction-chip is-selected d-inline-flex align-items-center gap-1 px-2 py-1 rounded text-body font-monospace user-select-none mb-0 cursor-pointer" 
-                                       title="Warehouse: ${escapeHtml(s.warehouse_name)} (${escapeHtml(s.warehouse_code)}) | Inbound: ${escapeHtml(s.inbound_date || 'N/A')} | Cost: $${escapeHtml(s.cost_price || '0.00')}">
-                                    <input type="checkbox" class="form-check-input mt-0 serial-checkbox" value="${escapeHtml(s.serial_number)}" data-warehouse-id="${s.warehouse_id}" checked>
-                                    <span class="badge bg-secondary-subtle text-body-secondary border px-1 py-0" style="font-size: 9.5px; letter-spacing: 0.5px;">${escapeHtml(s.warehouse_code)}</span>
-                                    <span class="serial-label-text">${escapeHtml(s.serial_number)}</span>
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="button" class="btn btn-link btn-sm p-0 text-primary select-all-serials-btn text-decoration-none" style="font-size: 11.5px;">Keep All (${serials.length})</button>
+                                <span class="text-muted">&bull;</span>
+                                <button type="button" class="btn btn-link btn-sm p-0 text-secondary deselect-all-serials-btn text-decoration-none" style="font-size: 11.5px;">Clear</button>
+                                <label class="btn btn-outline-primary btn-sm py-0 px-2 cursor-pointer mb-0 file-upload-btn ms-1" style="font-size: 11px;" title="Upload file">
+                                    <i class="bi bi-file-earmark-arrow-up me-1"></i> Upload
+                                    <input type="file" class="d-none serial-file-input" accept=".csv,.txt,.xlsx,.xls,.json">
                                 </label>
-                            `).join('')}
+                                <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-1 btn-refresh-serials" title="Refresh serials from warehouse">
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                </button>
+                            </div>
                         </div>
 
-                        <!-- Optional: Add newly discovered serials during physical audit -->
-                        <div class="p-2 border rounded bg-body-tertiary mb-1">
+                        <!-- Search or Select Serial Number Input Box -->
+                        <div class="serial-picker-wrapper position-relative mb-2">
+                            <label class="form-label small fw-semibold text-body mb-1">Search or Select Serial Number:</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                <input type="text" 
+                                       class="form-control form-control-sm serial-search-input" 
+                                       placeholder="Click to browse or type to search serial numbers in warehouse..." 
+                                       autocomplete="off">
+                                <button type="button" class="btn btn-outline-secondary btn-sm serial-picker-toggle" tabindex="-1" title="Browse available serial numbers">
+                                    <i class="bi bi-chevron-down"></i>
+                                </button>
+                            </div>
+
+                            <!-- Floating Dropdown Menu for Serial Numbers -->
+                            <div class="serial-dropdown-menu shadow rounded-2 border position-absolute w-100 mt-1 d-none" 
+                                 style="max-height: 220px; overflow-y: auto; z-index: 1040;">
+                            </div>
+                        </div>
+
+                        <!-- Selected Serials Textarea (Line by Line) -->
+                        <div class="pt-2 border-top">
                             <div class="d-flex align-items-center justify-content-between mb-1 flex-wrap gap-1">
-                                <span class="small fw-semibold text-dark" style="font-size: 11.5px;">
-                                    <i class="bi bi-plus-circle text-primary me-1"></i> Found Untracked Units? Add New Serials (Optional)
-                                </span>
-                                <div class="d-flex align-items-center gap-1">
-                                    <label class="btn btn-outline-primary btn-sm py-0 px-2 cursor-pointer mb-0 file-upload-btn" style="font-size: 11px;" title="Upload file">
-                                        <i class="bi bi-file-earmark-arrow-up me-1"></i> Upload
-                                        <input type="file" class="d-none serial-file-input" accept=".csv,.txt,.xlsx,.xls,.json">
-                                    </label>
-                                    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 btn-clear-new-serials" style="font-size: 11px;">Clear</button>
+                                <label class="form-label small text-muted mb-0 font-monospace" style="font-size: 11.5px;">Counted Serials on Shelf (List line by line):</label>
+                                <div class="d-flex align-items-center gap-1 flex-wrap">
+                                    <span class="badge bg-primary font-monospace serial-count-badge py-1 px-2" style="font-size: 11.5px;">
+                                        <i class="bi bi-box-seam me-1"></i>Count: = ${serials.length} units
+                                    </span>
+                                    <span class="badge bg-secondary-subtle text-body-secondary border font-monospace serial-remove-badge py-1 px-2" style="font-size: 11.5px;">
+                                        Removing: 0 units
+                                    </span>
+                                    <span class="badge bg-success-subtle text-success border font-monospace serial-new-badge d-none py-1 px-2" style="font-size: 11.5px;">
+                                    </span>
                                 </div>
                             </div>
-                            <textarea class="form-control form-control-sm font-monospace new-serials-textarea" rows="2" placeholder="Scan or enter any newly discovered serials found during audit (1 per line)..."></textarea>
-                            <span class="file-upload-status text-muted small font-monospace d-block mt-1" style="font-size: 11px;"></span>
+                            <textarea name="products[${index}][serials]" rows="4" class="form-control form-control-sm font-monospace serials-textarea" placeholder="Counted serial numbers present on shelf will appear here line by line...&#10;Select from input box above, or scan barcodes / type directly."></textarea>
+                            <div class="d-flex align-items-center justify-content-between mt-1">
+                                <span class="form-text small text-muted" style="font-size: 11px;">
+                                    Selecting serials from the input box above adds them here line by line. Any serial missing from this list will be deducted.
+                                </span>
+                                <span class="file-upload-status text-muted small font-monospace" style="font-size: 11px;"></span>
+                            </div>
                         </div>
 
-                        <textarea name="products[${index}][serials]" class="serials-textarea d-none"></textarea>
                         <textarea name="products[${index}][remove_serials]" class="remove-serials-textarea d-none"></textarea>
                         <textarea name="products[${index}][new_serials]" class="new-serials-textarea-hidden d-none"></textarea>
                     </div>
                 `;
 
-                const filterInput = serialBox.querySelector('.serial-filter-input');
-                const keepAllBtn = serialBox.querySelector('.btn-keep-all');
-                const removeAllBtn = serialBox.querySelector('.btn-remove-all');
-                const refreshBtn = serialBox.querySelector('.btn-refresh-serials');
-                const checkboxes = serialBox.querySelectorAll('.serial-checkbox');
+                const serialSearchInput = serialBox.querySelector('.serial-search-input');
+                const serialPickerToggle = serialBox.querySelector('.serial-picker-toggle');
+                const serialDropdown = serialBox.querySelector('.serial-dropdown-menu');
                 const serialsTextarea = serialBox.querySelector('.serials-textarea');
-                const removeSerialsTextarea = serialBox.querySelector('.remove-serials-textarea');
-                const newSerialsHidden = serialBox.querySelector('.new-serials-textarea-hidden');
-                const newSerialsTextarea = serialBox.querySelector('.new-serials-textarea');
+                const selectAllBtn = serialBox.querySelector('.select-all-serials-btn');
+                const deselectAllBtn = serialBox.querySelector('.deselect-all-serials-btn');
+                const refreshBtn = serialBox.querySelector('.btn-refresh-serials');
+                const fileInput = serialBox.querySelector('.serial-file-input');
+                const statusSpan = serialBox.querySelector('.file-upload-status');
                 const countBadge = serialBox.querySelector('.serial-count-badge');
                 const removeBadge = serialBox.querySelector('.serial-remove-badge');
-                const fileInput = serialBox.querySelector('.serial-file-input');
-                const clearNewBtn = serialBox.querySelector('.btn-clear-new-serials');
-                const statusSpan = serialBox.querySelector('.file-upload-status');
+                const newBadge = serialBox.querySelector('.serial-new-badge');
+                const removeSerialsTextarea = serialBox.querySelector('.remove-serials-textarea');
+                const newSerialsHidden = serialBox.querySelector('.new-serials-textarea-hidden');
 
-                function updateCorrectionSelection() {
-                    const keptList = [];
-                    const removeList = [];
+                function getTextareaSerials() {
+                    if (!serialsTextarea) return [];
+                    const text = (serialsTextarea.value || '').trim();
+                    if (!text) return [];
+                    return text.split(/[\r\n,]+/).map(s => s.trim()).filter(s => s.length > 0);
+                }
 
-                    checkboxes.forEach(cb => {
-                        const chip = cb.closest('.serial-chip');
-                        const textSpan = chip.querySelector('.serial-label-text');
-                        if (cb.checked) {
-                            chip.classList.add('is-selected');
-                            if (textSpan) textSpan.classList.remove('text-decoration-line-through', 'opacity-50');
-                            keptList.push(cb.value);
-                            if (currentWarehouseId === 'all' && cb.dataset.warehouseId) {
-                                const mainWh = document.getElementById('warehouseSelect');
-                                if (mainWh) mainWh.value = cb.dataset.warehouseId;
-                            }
-                        } else {
-                            chip.classList.remove('is-selected');
-                            if (textSpan) textSpan.classList.add('text-decoration-line-through', 'opacity-50');
-                            removeList.push(cb.value);
+                function syncCorrectionCountsFromTextarea() {
+                    const list = getTextareaSerials();
+                    const unique = Array.from(new Set(list));
+                    const count = unique.length;
+                    qtyInput.value = count;
+
+                    const whSerialSet = new Set(serials.map(s => s.serial_number.toUpperCase()));
+                    const newList = [];
+
+                    unique.forEach(sn => {
+                        if (!whSerialSet.has(sn.toUpperCase())) {
+                            newList.push(sn);
                         }
                     });
 
-                    // Parse new serials
-                    const newText = newSerialsTextarea.value.trim();
-                    const newSerialsList = newText ? newText.split(/[\r\n,]+/).map(s => s.trim()).filter(Boolean) : [];
+                    // Those in warehouse but missing from textarea
+                    const textareaSet = new Set(unique.map(s => s.toUpperCase()));
+                    const removeList = serials
+                        .filter(s => !textareaSet.has(s.serial_number.toUpperCase()))
+                        .map(s => s.serial_number);
 
-                    const totalCount = keptList.length + newSerialsList.length;
-                    qtyInput.value = totalCount;
+                    if (removeSerialsTextarea) removeSerialsTextarea.value = removeList.join('\n');
+                    if (newSerialsHidden) newSerialsHidden.value = newList.join('\n');
 
-                    serialsTextarea.value = keptList.join('\n');
-                    removeSerialsTextarea.value = removeList.join('\n');
-                    newSerialsHidden.value = newSerialsList.join('\n');
+                    if (countBadge) {
+                        countBadge.innerHTML = `<i class="bi bi-box-seam me-1"></i>Count: = ${count} units`;
+                        countBadge.className = count > 0
+                            ? 'badge bg-primary font-monospace serial-count-badge py-1 px-2'
+                            : 'badge bg-secondary-subtle text-body-secondary font-monospace serial-count-badge py-1 px-2';
+                    }
 
-                    countBadge.innerHTML = `<i class="bi bi-box-seam me-1"></i>Count: = ${totalCount} units`;
-                    if (removeList.length > 0) {
-                        removeBadge.className = 'badge bg-danger font-monospace serial-remove-badge py-1 px-2';
-                        removeBadge.innerHTML = `<i class="bi bi-dash-circle me-1"></i>Removing: ${removeList.length} units`;
-                    } else {
-                        removeBadge.className = 'badge bg-secondary-subtle text-body-secondary border font-monospace serial-remove-badge py-1 px-2';
-                        removeBadge.innerHTML = `Removing: 0 units`;
+                    if (removeBadge) {
+                        if (removeList.length > 0) {
+                            removeBadge.className = 'badge bg-danger font-monospace serial-remove-badge py-1 px-2';
+                            removeBadge.innerHTML = `<i class="bi bi-dash-circle me-1"></i>Removing: ${removeList.length} units`;
+                        } else {
+                            removeBadge.className = 'badge bg-secondary-subtle text-body-secondary border font-monospace serial-remove-badge py-1 px-2';
+                            removeBadge.innerHTML = 'Removing: 0 units';
+                        }
+                    }
+
+                    if (newBadge) {
+                        if (newList.length > 0) {
+                            newBadge.classList.remove('d-none');
+                            newBadge.innerHTML = `<i class="bi bi-plus-circle me-1"></i>New: +${newList.length} units`;
+                        } else {
+                            newBadge.classList.add('d-none');
+                        }
                     }
                 }
 
-                checkboxes.forEach(cb => {
-                    cb.addEventListener('change', updateCorrectionSelection);
-                });
+                function toggleSerialInTextarea(sn) {
+                    if (!serialsTextarea) return;
+                    const current = getTextareaSerials();
+                    const snUpper = sn.trim().toUpperCase();
+                    let updated;
+                    const exists = current.some(s => s.toUpperCase() === snUpper);
+                    if (exists) {
+                        updated = current.filter(s => s.toUpperCase() !== snUpper);
+                    } else {
+                        updated = [...current, sn.trim()];
+                    }
+                    serialsTextarea.value = updated.join('\n');
+                    syncCorrectionCountsFromTextarea();
+                }
 
-                filterInput.addEventListener('input', function () {
-                    const query = this.value.toLowerCase().trim();
-                    serialBox.querySelectorAll('.serial-chip').forEach(chip => {
-                        const text = chip.textContent.toLowerCase();
-                        if (!query || text.includes(query)) {
-                            chip.classList.remove('d-none');
-                        } else {
-                            chip.classList.add('d-none');
+                function renderCorrectionDropdown(filterText = '') {
+                    if (!serialDropdown) return;
+                    const query = (filterText || '').toLowerCase().trim();
+                    const currentList = getTextareaSerials().map(s => s.toUpperCase());
+
+                    const matched = serials.filter(s => {
+                        if (!query) return true;
+                        return s.serial_number && s.serial_number.toLowerCase().includes(query);
+                    });
+
+                    serialDropdown.innerHTML = '';
+                    if (serials.length === 0) {
+                        serialDropdown.innerHTML = '<div class="p-3 text-center text-muted small"><i class="bi bi-info-circle me-1"></i>No serial numbers registered in this warehouse</div>';
+                        return;
+                    }
+
+                    if (matched.length === 0) {
+                        serialDropdown.innerHTML = `<div class="p-3 text-center text-muted small">No serials match "${escapeHtml(filterText)}"</div>`;
+                        return;
+                    }
+
+                    matched.forEach(s => {
+                        const sn = s.serial_number;
+                        const isAdded = currentList.includes(sn.toUpperCase());
+
+                        const item = document.createElement('div');
+                        item.className = `serial-dropdown-item px-3 py-2 border-bottom d-flex align-items-center justify-content-between ${isAdded ? 'is-selected bg-primary-subtle' : ''}`;
+                        item.innerHTML = `
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-secondary-subtle text-body-secondary border px-1 py-0" style="font-size: 9.5px;">${escapeHtml(s.warehouse_code || 'WH')}</span>
+                                <span class="font-monospace ${isAdded ? 'fw-bold text-primary' : 'text-body-emphasis'}">
+                                    <i class="bi bi-upc me-1 text-muted"></i>${escapeHtml(sn)}
+                                </span>
+                            </div>
+                            ${isAdded
+                                ? '<span class="badge bg-primary-subtle text-primary small font-monospace"><i class="bi bi-check-lg me-1"></i>Counted (click to remove)</span>'
+                                : '<span class="badge bg-secondary-subtle text-body-secondary small font-monospace"><i class="bi bi-plus me-1"></i>Add to Count</span>'
+                            }
+                        `;
+
+                        item.addEventListener('mousedown', function (e) {
+                            e.preventDefault();
+                            toggleSerialInTextarea(sn);
+                            renderCorrectionDropdown(serialSearchInput ? serialSearchInput.value : '');
+                        });
+
+                        serialDropdown.appendChild(item);
+                    });
+                }
+
+                if (serialSearchInput) {
+                    serialSearchInput.addEventListener('focus', function () {
+                        renderCorrectionDropdown(this.value);
+                        if (serialDropdown) serialDropdown.classList.remove('d-none');
+                    });
+
+                    serialSearchInput.addEventListener('click', function () {
+                        renderCorrectionDropdown(this.value);
+                        if (serialDropdown) serialDropdown.classList.remove('d-none');
+                    });
+
+                    serialSearchInput.addEventListener('input', function () {
+                        renderCorrectionDropdown(this.value);
+                        if (serialDropdown) serialDropdown.classList.remove('d-none');
+                    });
+
+                    serialSearchInput.addEventListener('keydown', function (e) {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const query = (this.value || '').trim();
+                            if (!query) return;
+                            const match = serials.find(s => s.serial_number.toLowerCase() === query.toLowerCase()) ||
+                                serials.find(s => s.serial_number.toLowerCase().includes(query.toLowerCase()));
+                            if (match) {
+                                toggleSerialInTextarea(match.serial_number);
+                            } else {
+                                toggleSerialInTextarea(query);
+                            }
+                            this.value = '';
+                            renderCorrectionDropdown('');
                         }
                     });
-                });
 
-                keepAllBtn.addEventListener('click', function () {
-                    serialBox.querySelectorAll('.serial-chip:not(.d-none) .serial-checkbox').forEach(cb => {
-                        cb.checked = true;
+                    serialSearchInput.addEventListener('blur', function () {
+                        setTimeout(() => {
+                            if (serialDropdown) serialDropdown.classList.add('d-none');
+                        }, 200);
                     });
-                    updateCorrectionSelection();
-                });
+                }
 
-                removeAllBtn.addEventListener('click', function () {
-                    serialBox.querySelectorAll('.serial-chip:not(.d-none) .serial-checkbox').forEach(cb => {
-                        cb.checked = false;
+                if (serialPickerToggle) {
+                    serialPickerToggle.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        if (serialDropdown && serialDropdown.classList.contains('d-none')) {
+                            if (serialSearchInput) serialSearchInput.focus();
+                            renderCorrectionDropdown(serialSearchInput ? serialSearchInput.value : '');
+                            serialDropdown.classList.remove('d-none');
+                        } else if (serialDropdown) {
+                            serialDropdown.classList.add('d-none');
+                        }
                     });
-                    updateCorrectionSelection();
-                });
+                }
 
-                refreshBtn.addEventListener('click', function () {
-                    rowEl._loadedFor = null;
-                    renderSerialBox(rowEl);
-                });
-
-                newSerialsTextarea.addEventListener('input', updateCorrectionSelection);
-
-                fileInput.addEventListener('change', function (e) {
-                    const file = e.target.files && e.target.files[0];
-                    if (!file) return;
-
-                    handleFileUpload(file, statusSpan, (extractedSerials, message) => {
-                        const existingText = newSerialsTextarea.value.trim();
-                        const existing = existingText ? existingText.split(/[\r\n,]+/).map(s => s.trim()).filter(Boolean) : [];
-                        const combined = [...new Set([...existing, ...extractedSerials])];
-                        newSerialsTextarea.value = combined.join('\n');
-                        updateCorrectionSelection();
-                        statusSpan.innerHTML = `<span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>${escapeHtml(message)}</span>`;
-                        fileInput.value = '';
+                if (selectAllBtn) {
+                    selectAllBtn.addEventListener('click', function () {
+                        const allSerials = serials.map(s => s.serial_number);
+                        if (serialsTextarea) {
+                            serialsTextarea.value = allSerials.join('\n');
+                        }
+                        syncCorrectionCountsFromTextarea();
+                        if (serialDropdown && !serialDropdown.classList.contains('d-none')) {
+                            renderCorrectionDropdown(serialSearchInput ? serialSearchInput.value : '');
+                        }
                     });
-                });
+                }
 
-                clearNewBtn.addEventListener('click', function () {
-                    newSerialsTextarea.value = '';
-                    statusSpan.innerHTML = '';
-                    updateCorrectionSelection();
-                });
+                if (deselectAllBtn) {
+                    deselectAllBtn.addEventListener('click', function () {
+                        if (serialsTextarea) {
+                            serialsTextarea.value = '';
+                        }
+                        syncCorrectionCountsFromTextarea();
+                        if (serialDropdown && !serialDropdown.classList.contains('d-none')) {
+                            renderCorrectionDropdown(serialSearchInput ? serialSearchInput.value : '');
+                        }
+                    });
+                }
 
-                // Initial sync
-                updateCorrectionSelection();
+                if (refreshBtn) {
+                    refreshBtn.addEventListener('click', function () {
+                        rowEl._loadedFor = null;
+                        renderSerialBox(rowEl);
+                    });
+                }
+
+                if (fileInput) {
+                    fileInput.addEventListener('change', function (e) {
+                        const file = e.target.files && e.target.files[0];
+                        if (!file) return;
+
+                        handleFileUpload(file, statusSpan, (extractedSerials, message) => {
+                            const existingText = serialsTextarea.value.trim();
+                            const existing = existingText ? existingText.split(/[\r\n,]+/).map(s => s.trim()).filter(Boolean) : [];
+                            const combined = [...new Set([...existing, ...extractedSerials])];
+                            serialsTextarea.value = combined.join('\n');
+                            syncCorrectionCountsFromTextarea();
+                            if (statusSpan) {
+                                statusSpan.innerHTML = `<span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>${escapeHtml(message)}</span>`;
+                            }
+                            fileInput.value = '';
+                            if (serialDropdown && !serialDropdown.classList.contains('d-none')) {
+                                renderCorrectionDropdown(serialSearchInput ? serialSearchInput.value : '');
+                            }
+                        });
+                    });
+                }
+
+                if (serialsTextarea) {
+                    serialsTextarea.addEventListener('input', function () {
+                        syncCorrectionCountsFromTextarea();
+                        if (serialDropdown && !serialDropdown.classList.contains('d-none')) {
+                            renderCorrectionDropdown(serialSearchInput ? serialSearchInput.value : '');
+                        }
+                    });
+                }
+
+                // Initial pre-population with all in-stock units
+                serialsTextarea.value = serials.map(s => s.serial_number).join('\n');
+                syncCorrectionCountsFromTextarea();
             } else {
-                // Addition mode: Scan, type, or upload
+                // Addition mode: Scan, type, or upload official manufacturer serial numbers
                 serialBox.innerHTML = `
                     <div class="serial-addition-wrapper">
                         <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
                             <div>
                                 <label class="form-label small fw-bold text-dark mb-0">
-                                    <i class="bi bi-upc-scan text-primary me-1"></i> Add Serial Numbers
+                                    <i class="bi bi-upc-scan text-primary me-1"></i> Scan / Enter Company Serial Numbers *
                                 </label>
+                                <small class="text-muted d-block" style="font-size: 11px;">Each serial number represents 1 unit. Serial numbers must come from manufacturer box.</small>
                             </div>
                             <span class="badge bg-secondary-subtle text-body-secondary font-monospace serial-count-badge py-1 px-2" style="font-size: 12px;">
                                 <i class="bi bi-box-seam me-1"></i>0 units (+0)
@@ -1053,7 +1287,7 @@
                             </label>
 
                             <button type="button" class="btn btn-outline-secondary btn-sm py-1 px-2 btn-clear-serials" style="font-size: 12px;">
-                                <i class="bi bi-x-circle me-1"></i> Clear Text
+                                <i class="bi bi-x-circle me-1"></i> Clear Serials
                             </button>
 
                             <span class="file-upload-status text-muted small font-monospace" style="font-size: 11px;"></span>
@@ -1062,7 +1296,7 @@
                         <textarea name="products[${index}][serials]" 
                                   rows="3" 
                                   class="form-control form-control-sm font-monospace serials-textarea" 
-                                  placeholder="Scan barcode or enter serial numbers (1 per line or comma-separated)...&#10;e.g. SN-AMD-10001&#10;SN-AMD-10002 (quantity auto-updates)"></textarea>
+                                  placeholder="Scan barcodes or enter manufacturer serial numbers (one per line, comma or space separated)..."></textarea>
                     </div>
                 `;
 
@@ -1143,11 +1377,11 @@
                 const matched = productsList.filter(p => {
                     if (!query) return true;
                     const fullStr = `${p.name} (sku: ${p.sku}) ${p.category || ''}`.toLowerCase();
-                    return fullStr.includes(query) || 
-                           query.includes(p.sku.toLowerCase()) ||
-                           (p.name && p.name.toLowerCase().includes(query)) || 
-                           (p.sku && p.sku.toLowerCase().includes(query)) || 
-                           (p.category && p.category.toLowerCase().includes(query));
+                    return fullStr.includes(query) ||
+                        query.includes(p.sku.toLowerCase()) ||
+                        (p.name && p.name.toLowerCase().includes(query)) ||
+                        (p.sku && p.sku.toLowerCase().includes(query)) ||
+                        (p.category && p.category.toLowerCase().includes(query));
                 });
 
                 dropdown.innerHTML = '';
@@ -1239,7 +1473,7 @@
                     dropdown.classList.add('d-none');
                     if (!hiddenIdInput.value) {
                         const val = searchInput.value.toLowerCase().trim();
-                        const exact = productsList.find(p => 
+                        const exact = productsList.find(p =>
                             p.sku.toLowerCase() === val ||
                             p.name.toLowerCase() === val ||
                             `${p.name} (sku: ${p.sku})`.toLowerCase() === val
@@ -1277,14 +1511,9 @@
         function removeProductRow(btn) {
             const rows = document.querySelectorAll('.product-row');
             if (rows.length <= 1) {
-                const row = rows[0];
-                row.querySelector('.product-search-input').value = '';
-                row.querySelector('.product-id-input').value = '';
-                row.querySelector('.qty-input').value = '0';
-                row.querySelector('.selected-product-badge').classList.add('d-none');
-                row._loadedFor = null;
-                row._loadedSerials = [];
-                renderSerialBox(row);
+                if (typeof window.adminNotify === 'function') {
+                    window.adminNotify('A stock adjustment must contain at least one hardware component.', 'warning', 'Notice');
+                }
                 return;
             }
             btn.closest('.product-row').remove();
@@ -1309,8 +1538,44 @@
                 });
             }
 
+            // Client-side form submit validation
+            const form = document.getElementById('stockAdjustmentForm');
+            if (form) {
+                form.addEventListener('submit', function (e) {
+                    const rows = document.querySelectorAll('.product-row');
+                    if (rows.length === 0) {
+                        e.preventDefault();
+                        if (typeof window.adminNotify === 'function') {
+                            window.adminNotify('Please add at least one hardware component to adjust.', 'warning', 'Component Required');
+                        }
+                        return;
+                    }
+
+                    for (let i = 0; i < rows.length; i++) {
+                        const row = rows[i];
+                        const prodId = row.querySelector('.product-id-input')?.value;
+                        const qty = parseInt(row.querySelector('.qty-input')?.value || '0', 10);
+                        if (!prodId) {
+                            e.preventDefault();
+                            if (typeof window.adminNotify === 'function') {
+                                window.adminNotify('Please select a hardware component for all adjustment rows.', 'warning', 'Component Missing');
+                            }
+                            row.querySelector('.product-search-input')?.focus();
+                            return;
+                        }
+                        if (qty <= 0) {
+                            e.preventDefault();
+                            if (typeof window.adminNotify === 'function') {
+                                window.adminNotify('Adjustment quantity must be at least 1 unit.', 'warning', 'Invalid Quantity');
+                            }
+                            row.querySelector('.qty-input')?.focus();
+                            return;
+                        }
+                    }
+                });
+            }
+
             addProductRow();
         });
     </script>
 </x-app-layout>
-

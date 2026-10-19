@@ -7,13 +7,17 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Backend\StoreBrandRequest;
 use App\Http\Requests\Backend\UpdateBrandRequest;
 use App\Models\Brand;
+use App\Services\MediaService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class BrandController extends Controller
 {
+    public function __construct(
+        protected MediaService $mediaService
+    ) {}
+
     /**
      * Display a listing of hardware manufacturers/brands.
      */
@@ -23,20 +27,10 @@ class BrandController extends Controller
             return $dataTable->ajax();
         }
 
-        $query = Brand::query()
-            ->withCount('products');
-
-        if ($request->filled('search')) {
-            $search = $request->input('search');
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'ilike', "%{$search}%")
-                    ->orWhere('slug', 'ilike', "%{$search}%")
-                    ->orWhere('website', 'ilike', "%{$search}%")
-                    ->orWhere('description', 'ilike', "%{$search}%");
-            });
-        }
-
-        $brands = $query->latest('updated_at')
+        $brands = Brand::query()
+            ->withCount('products')
+            ->search($request->input('search'), ['name', 'slug', 'website', 'description'])
+            ->latest('updated_at')
             ->paginate(15)
             ->withQueryString();
 
@@ -57,13 +51,10 @@ class BrandController extends Controller
     public function store(StoreBrandRequest $request): RedirectResponse
     {
         $validated = $request->validated();
-        if (empty($validated['slug'])) {
-            $validated['slug'] = str()->slug($validated['name']);
-        }
         $validated['is_active'] = $request->boolean('is_active', true);
 
         if ($request->hasFile('logo')) {
-            $validated['logo'] = $request->file('logo')->store('brands', 'public');
+            $validated['logo'] = $this->mediaService->upload($request->file('logo'), 'brands');
         }
 
         Brand::create($validated);
@@ -85,21 +76,13 @@ class BrandController extends Controller
     public function update(UpdateBrandRequest $request, Brand $brand): RedirectResponse
     {
         $validated = $request->validated();
-        if (empty($validated['slug'])) {
-            $validated['slug'] = str()->slug($validated['name']);
-        }
         $validated['is_active'] = $request->boolean('is_active');
 
         if ($request->boolean('remove_logo')) {
-            if ($brand->logo && Storage::disk('public')->exists($brand->logo)) {
-                Storage::disk('public')->delete($brand->logo);
-            }
+            $this->mediaService->delete($brand->logo);
             $validated['logo'] = null;
         } elseif ($request->hasFile('logo')) {
-            if ($brand->logo && Storage::disk('public')->exists($brand->logo)) {
-                Storage::disk('public')->delete($brand->logo);
-            }
-            $validated['logo'] = $request->file('logo')->store('brands', 'public');
+            $validated['logo'] = $this->mediaService->replace($brand->logo, $request->file('logo'), 'brands');
         }
 
         $brand->update($validated);
@@ -116,10 +99,7 @@ class BrandController extends Controller
             return back()->with('error', 'Cannot delete brand with associated products.');
         }
 
-        if ($brand->logo && Storage::disk('public')->exists($brand->logo)) {
-            Storage::disk('public')->delete($brand->logo);
-        }
-
+        $this->mediaService->delete($brand->logo);
         $brand->delete();
 
         return redirect()->route('admin.brands.index')->with('success', 'Brand deleted successfully.');

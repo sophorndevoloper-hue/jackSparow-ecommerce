@@ -163,7 +163,7 @@ class RoleAndPermissionSeeder extends Seeder
         $specialCustomer = FrontendUser::firstOrCreate(
             ['email' => 'alex.vip@customer.test'],
             [
-                'name' => 'Alex Overclocker (VIP)',
+                'name' => 'Alex Overclocker',
                 'password' => Hash::make('password'),
                 'phone' => '+1 (555) 987-6543',
                 'city' => 'Austin',

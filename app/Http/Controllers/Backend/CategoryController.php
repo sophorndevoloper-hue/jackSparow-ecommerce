@@ -22,20 +22,11 @@ class CategoryController extends Controller
             return $dataTable->ajax();
         }
 
-        $query = Category::query()
+        $categories = Category::query()
             ->with('parent')
-            ->withCount('products');
-
-        if ($request->filled('search')) {
-            $search = $request->input('search');
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'ilike', "%{$search}%")
-                    ->orWhere('slug', 'ilike', "%{$search}%")
-                    ->orWhere('description', 'ilike', "%{$search}%");
-            });
-        }
-
-        $categories = $query->latest('updated_at')
+            ->withCount('products')
+            ->search($request->input('search'), ['name', 'slug', 'description'])
+            ->latest('updated_at')
             ->paginate(15)
             ->withQueryString();
 
@@ -58,9 +49,6 @@ class CategoryController extends Controller
     public function store(StoreCategoryRequest $request): RedirectResponse
     {
         $validated = $request->validated();
-        if (empty($validated['slug'])) {
-            $validated['slug'] = str()->slug($validated['name']);
-        }
         $validated['is_active'] = $request->boolean('is_active', true);
 
         Category::create($validated);
@@ -87,9 +75,6 @@ class CategoryController extends Controller
     public function update(UpdateCategoryRequest $request, Category $category): RedirectResponse
     {
         $validated = $request->validated();
-        if (empty($validated['slug'])) {
-            $validated['slug'] = str()->slug($validated['name']);
-        }
         $validated['is_active'] = $request->boolean('is_active');
 
         $category->update($validated);

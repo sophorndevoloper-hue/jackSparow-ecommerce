@@ -34,9 +34,9 @@ class OrderController extends Controller
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
-                $q->where('order_number', 'ilike', "%{$search}%")
-                    ->orWhere('customer_name', 'ilike', "%{$search}%")
-                    ->orWhere('customer_email', 'ilike', "%{$search}%");
+                $q->where('order_number', 'like', "%{$search}%")
+                    ->orWhere('customer_name', 'like', "%{$search}%")
+                    ->orWhere('customer_email', 'like', "%{$search}%");
             });
         }
 
@@ -50,7 +50,7 @@ class OrderController extends Controller
      */
     public function show(Order $order): View
     {
-        $order->load(['items.product', 'user']);
+        $order->load(['items.product', 'user', 'deliveries.shippingMethod', 'shippingMethod']);
 
         return view('backend.orders.show', compact('order'));
     }

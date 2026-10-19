@@ -155,8 +155,14 @@ class StockAdjustmentController extends Controller
                         default => SerialNumber::STATUS_OTHER,
                     };
 
+                    $isSerialTracked = (bool) ($product->requires_serial_tracking || ! empty($cleanedSerials) || SerialNumber::where('product_id', $product->id)->exists());
+
                     if ($type === 'addition') {
-                        if (! empty($cleanedSerials)) {
+                        if ($isSerialTracked) {
+                            if (empty($cleanedSerials)) {
+                                throw new InvalidArgumentException("Product '{$product->name}' is serial-tracked. Please enter or scan the official manufacturer serial numbers.");
+                            }
+
                             $inputQty = count($cleanedSerials);
 
                             // Check existing serials in inventory
@@ -180,17 +186,22 @@ class StockAdjustmentController extends Controller
                             if (! $product->requires_serial_tracking) {
                                 $product->update(['requires_serial_tracking' => true]);
                             }
-                        }
-
-                        if ($inputQty <= 0) {
-                            throw new InvalidArgumentException("Please enter or select at least 1 serial number for '{$product->name}'.");
+                        } else {
+                            // Non-serialized bulk product: Quantity entered directly
+                            if ($inputQty <= 0) {
+                                throw new InvalidArgumentException("Please specify an adjustment quantity of at least 1 unit for '{$product->name}'.");
+                            }
                         }
 
                         $newQuantity = $oldQuantity + $inputQty;
                         $adjustedQuantity = +$inputQty;
 
                     } elseif ($type === 'subtraction') {
-                        if (! empty($cleanedSerials)) {
+                        if ($isSerialTracked) {
+                            if (empty($cleanedSerials)) {
+                                throw new InvalidArgumentException("Product '{$product->name}' is serial-tracked. Please select the serial numbers to deduct.");
+                            }
+
                             $inputQty = count($cleanedSerials);
 
                             // Check that matching serials exist and are in stock in this warehouse
@@ -215,103 +226,106 @@ class StockAdjustmentController extends Controller
                                     'outbound_date' => now()->toDateString(),
                                     'notes' => 'Deducted via stock adjustment ('.$request->input('reason').')',
                                 ]);
-                        }
-
-                        if ($inputQty <= 0) {
-                            throw new InvalidArgumentException("Please enter or select at least 1 serial number for '{$product->name}'.");
+                        } else {
+                            // Non-serialized bulk product: Quantity entered directly
+                            if ($inputQty <= 0) {
+                                throw new InvalidArgumentException("Please specify an adjustment quantity of at least 1 unit for '{$product->name}'.");
+                            }
                         }
 
                         $newQuantity = max(0, $oldQuantity - $inputQty);
                         $adjustedQuantity = -$inputQty;
 
                     } elseif ($type === 'correction') {
-                        // 1. If explicit remove_serials provided, update them to deducted status
-                        if (! empty($removeSerials)) {
-                            $existingToRemove = SerialNumber::where('product_id', $product->id)
-                                ->where('warehouse_id', $warehouse->id)
-                                ->where('status', SerialNumber::STATUS_IN_STOCK)
-                                ->whereIn('serial_number', $removeSerials)
-                                ->pluck('serial_number')
-                                ->toArray();
-
-                            $missingToRemove = array_diff($removeSerials, $existingToRemove);
-                            if (! empty($missingToRemove)) {
-                                throw new InvalidArgumentException("The following serial number(s) to remove were not found in stock in {$warehouse->name} for '{$product->name}': ".implode(', ', $missingToRemove));
+                        if ($isSerialTracked) {
+                            if (empty($cleanedSerials) && empty($removeSerials) && empty($newSerials) && $inputQty !== $oldQuantity) {
+                                throw new InvalidArgumentException("Count correction for serialized product '{$product->name}' requires specifying active or removed manufacturer serial numbers.");
                             }
 
-                            SerialNumber::where('product_id', $product->id)
-                                ->where('warehouse_id', $warehouse->id)
-                                ->whereIn('serial_number', $removeSerials)
-                                ->update([
-                                    'status' => $deductStatus,
-                                    'outbound_date' => now()->toDateString(),
-                                    'notes' => 'Removed via count correction audit ('.$request->input('reason').')',
-                                ]);
-                        }
+                            // 1. If explicit remove_serials provided, update them to deducted status
+                            if (! empty($removeSerials)) {
+                                $existingToRemove = SerialNumber::where('product_id', $product->id)
+                                    ->where('warehouse_id', $warehouse->id)
+                                    ->where('status', SerialNumber::STATUS_IN_STOCK)
+                                    ->whereIn('serial_number', $removeSerials)
+                                    ->pluck('serial_number')
+                                    ->toArray();
 
-                        // 2. Process newly added serial numbers
-                        $serialsToCreate = $newSerials;
-                        if (! empty($cleanedSerials)) {
-                            $alreadyInDb = SerialNumber::whereIn('serial_number', $cleanedSerials)->pluck('serial_number')->toArray();
-                            $brandNew = array_diff($cleanedSerials, $alreadyInDb);
-                            $serialsToCreate = array_values(array_unique(array_merge($serialsToCreate, $brandNew)));
-                        }
+                                $missingToRemove = array_diff($removeSerials, $existingToRemove);
+                                if (! empty($missingToRemove)) {
+                                    throw new InvalidArgumentException("The following serial number(s) to remove were not found in stock in {$warehouse->name} for '{$product->name}': ".implode(', ', $missingToRemove));
+                                }
 
-                        if (! empty($serialsToCreate)) {
-                            $conflicting = SerialNumber::whereIn('serial_number', $serialsToCreate)->pluck('serial_number')->toArray();
-                            if (! empty($conflicting)) {
-                                throw new InvalidArgumentException("Serial number(s) already registered in inventory for '{$product->name}': ".implode(', ', $conflicting));
-                            }
-
-                            foreach ($serialsToCreate as $serial) {
-                                SerialNumber::create([
-                                    'product_id' => $product->id,
-                                    'warehouse_id' => $warehouse->id,
-                                    'serial_number' => $serial,
-                                    'status' => SerialNumber::STATUS_IN_STOCK,
-                                    'cost_price' => $product->cost_price,
-                                    'inbound_date' => now()->toDateString(),
-                                ]);
-                            }
-
-                            if (! $product->requires_serial_tracking) {
-                                $product->update(['requires_serial_tracking' => true]);
-                            }
-                        }
-
-                        // 3. If remove_serials was not explicitly provided, but cleanedSerials is passed as the confirmed in-stock list:
-                        // Any existing in-stock serial in this warehouse NOT in cleanedSerials should be removed!
-                        if (empty($removeSerials) && ! empty($cleanedSerials)) {
-                            $existingInWarehouse = SerialNumber::where('product_id', $product->id)
-                                ->where('warehouse_id', $warehouse->id)
-                                ->where('status', SerialNumber::STATUS_IN_STOCK)
-                                ->pluck('serial_number')
-                                ->toArray();
-
-                            $unconfirmed = array_diff($existingInWarehouse, $cleanedSerials);
-                            if (! empty($unconfirmed)) {
                                 SerialNumber::where('product_id', $product->id)
                                     ->where('warehouse_id', $warehouse->id)
-                                    ->whereIn('serial_number', $unconfirmed)
+                                    ->whereIn('serial_number', $removeSerials)
                                     ->update([
                                         'status' => $deductStatus,
                                         'outbound_date' => now()->toDateString(),
-                                        'notes' => 'Removed via count correction audit (unconfirmed unit)',
+                                        'notes' => 'Removed via count correction audit ('.$request->input('reason').')',
                                     ]);
                             }
-                        }
 
-                        // 4. Calculate exact new quantity:
-                        $hasSerialsInWh = SerialNumber::where('product_id', $product->id)
-                            ->where('warehouse_id', $warehouse->id)
-                            ->exists();
+                            // 2. Process newly added serial numbers
+                            $serialsToCreate = $newSerials;
+                            if (! empty($cleanedSerials)) {
+                                $alreadyInDb = SerialNumber::whereIn('serial_number', $cleanedSerials)->pluck('serial_number')->toArray();
+                                $brandNew = array_diff($cleanedSerials, $alreadyInDb);
+                                $serialsToCreate = array_values(array_unique(array_merge($serialsToCreate, $brandNew)));
+                            }
 
-                        if ($product->requires_serial_tracking || $hasSerialsInWh) {
+                            if (! empty($serialsToCreate)) {
+                                $conflicting = SerialNumber::whereIn('serial_number', $serialsToCreate)->pluck('serial_number')->toArray();
+                                if (! empty($conflicting)) {
+                                    throw new InvalidArgumentException("Serial number(s) already registered in inventory for '{$product->name}': ".implode(', ', $conflicting));
+                                }
+
+                                foreach ($serialsToCreate as $serial) {
+                                    SerialNumber::create([
+                                        'product_id' => $product->id,
+                                        'warehouse_id' => $warehouse->id,
+                                        'serial_number' => $serial,
+                                        'status' => SerialNumber::STATUS_IN_STOCK,
+                                        'cost_price' => $product->cost_price,
+                                        'inbound_date' => now()->toDateString(),
+                                    ]);
+                                }
+
+                                if (! $product->requires_serial_tracking) {
+                                    $product->update(['requires_serial_tracking' => true]);
+                                }
+                            }
+
+                            // 3. If remove_serials was not explicitly provided, but cleanedSerials is passed as the confirmed in-stock list:
+                            if (empty($removeSerials) && ! empty($cleanedSerials)) {
+                                $existingInWarehouse = SerialNumber::where('product_id', $product->id)
+                                    ->where('warehouse_id', $warehouse->id)
+                                    ->where('status', SerialNumber::STATUS_IN_STOCK)
+                                    ->pluck('serial_number')
+                                    ->toArray();
+
+                                $unconfirmed = array_diff($existingInWarehouse, $cleanedSerials);
+                                if (! empty($unconfirmed)) {
+                                    SerialNumber::where('product_id', $product->id)
+                                        ->where('warehouse_id', $warehouse->id)
+                                        ->whereIn('serial_number', $unconfirmed)
+                                        ->update([
+                                            'status' => $deductStatus,
+                                            'outbound_date' => now()->toDateString(),
+                                            'notes' => 'Removed via count correction audit (unconfirmed unit)',
+                                        ]);
+                                }
+                            }
+
                             $newQuantity = SerialNumber::where('product_id', $product->id)
                                 ->where('warehouse_id', $warehouse->id)
                                 ->where('status', SerialNumber::STATUS_IN_STOCK)
                                 ->count();
                         } else {
+                            // Non-serialized bulk product: Direct quantity correction
+                            if ($inputQty < 0) {
+                                throw new InvalidArgumentException("Please specify an adjustment quantity of at least 0 units for '{$product->name}'.");
+                            }
                             $newQuantity = max(0, $inputQty);
                         }
 

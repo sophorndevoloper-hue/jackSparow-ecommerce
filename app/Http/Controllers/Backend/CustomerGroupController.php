@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Backend;
 use App\DataTables\CustomerGroupDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\CustomerGroup;
+use App\Models\FrontendUser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -20,10 +21,13 @@ class CustomerGroupController extends Controller
         }
 
         $groups = CustomerGroup::withCount(['frontendUsers', 'priceTiers'])
+            ->with(['frontendUsers' => fn ($q) => $q->orderBy('name')])
             ->latest('updated_at')
             ->get();
 
-        return view('backend.customer-groups.index', compact('groups', 'dataTable'));
+        $allCustomers = FrontendUser::orderBy('name')->get();
+
+        return view('backend.customer-groups.index', compact('groups', 'allCustomers', 'dataTable'));
     }
 
     /**
@@ -76,6 +80,34 @@ class CustomerGroupController extends Controller
         $customerGroup->update($validated);
 
         return redirect()->route('admin.customer-groups.index')->with('success', "Customer group '{$customerGroup->name}' updated successfully.");
+    }
+
+    /**
+     * Assign one or multiple customers to the customer group.
+     */
+    public function assignUsers(Request $request, CustomerGroup $customerGroup): RedirectResponse
+    {
+        $validated = $request->validate([
+            'customer_ids' => ['required', 'array', 'min:1'],
+            'customer_ids.*' => ['required', 'integer', 'exists:frontend_users,id'],
+        ]);
+
+        $count = FrontendUser::whereIn('id', $validated['customer_ids'])
+            ->update(['customer_group_id' => $customerGroup->id]);
+
+        return back()->with('success', "{$count} ".str('customer')->plural($count)." successfully added to '{$customerGroup->name}'.");
+    }
+
+    /**
+     * Remove a customer from the customer group.
+     */
+    public function removeUser(CustomerGroup $customerGroup, FrontendUser $customer): RedirectResponse
+    {
+        if ($customer->customer_group_id === $customerGroup->id) {
+            $customer->update(['customer_group_id' => null]);
+        }
+
+        return back()->with('success', "Customer '{$customer->name}' removed from '{$customerGroup->name}'.");
     }
 
     /**

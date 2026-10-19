@@ -22,17 +22,19 @@
                         {{ ucwords(str_replace('-', ' ', request('category'))) }}
                     @elseif(request('brand'))
                         {{ ucwords(str_replace('-', ' ', request('brand'))) }} Components
+                    @elseif(request('collection'))
+                        {{ ucwords(str_replace('-', ' ', request('collection'))) }} Collection
                     @else
-                        All Computer Components & Hardware
+                        All Computer Components &amp; Hardware
                     @endif
                 </h1>
                 <p class="text-xs sm:text-sm text-gray-500 mt-1">
-                    Showing <strong class="text-gray-900">{{ $products->total() }}</strong> performance components & parts
+                    Showing <strong class="text-gray-900">{{ $products->total() }}</strong> performance components &amp; parts
                 </p>
             </div>
 
             <!-- Active Filters Quick Bar -->
-            @if(request('category') || request('brand') || request('search') || request('in_stock') || request('min_price') || request('max_price'))
+            @if(request('category') || request('brand') || request('collection') || request('search') || request('in_stock') || request('min_price') || request('max_price'))
                 <div class="flex flex-wrap items-center gap-2">
                     <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Active:</span>
 
@@ -47,6 +49,14 @@
                         <a href="{{ request()->fullUrlWithQuery(['brand' => null]) }}" class="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-full text-xs font-semibold transition">
                             <span>Brand: {{ strtoupper(request('brand')) }}</span>
                             <span class="text-blue-500 hover:text-blue-800 text-sm leading-none">&times;</span>
+                        </a>
+                    @endif
+
+
+                    @if(request('collection'))
+                        <a href="{{ request()->fullUrlWithQuery(['collection' => null]) }}" class="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-full text-xs font-semibold transition">
+                            <span>Collection: {{ ucwords(str_replace('-', ' ', request('collection'))) }}</span>
+                            <span class="text-indigo-500 hover:text-indigo-800 text-sm leading-none">&times;</span>
                         </a>
                     @endif
 
@@ -78,13 +88,13 @@
     <div class="flex flex-col md:flex-row gap-8 items-start">
 
         <!-- Sidebar Filters -->
-        <aside class="w-full md:w-64 lg:w-72 shrink-0">
+        <aside class="w-full md:w-64 lg:w-72 shrink-0 md:sticky md:top-28 md:self-start md:max-h-[calc(100vh-8rem)] md:overflow-y-auto pr-0.5">
             <form action="{{ route('shop') }}" method="GET" class="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs space-y-6">
                 @if(request('search'))
                     <input type="hidden" name="search" value="{{ request('search') }}">
                 @endif
-                @if(request('sort'))
-                    <input type="hidden" name="sort" value="{{ request('sort') }}">
+                @if(!empty($sort) && $sort !== 'newest')
+                    <input type="hidden" name="sort" value="{{ $sort }}">
                 @endif
 
                 <div class="flex items-center justify-between pb-3 border-b border-gray-100">
@@ -156,6 +166,37 @@
                     </div>
                 </div>
 
+
+                <!-- Product Collection Filter -->
+                @if(isset($collections) && $collections->isNotEmpty())
+                    <div class="pt-4 border-t border-gray-100">
+                        <span class="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2.5">Product Collection</span>
+                        <div class="space-y-1 max-h-52 overflow-y-auto pr-1">
+                            <label class="group flex items-center justify-between px-3 py-2 rounded-xl text-xs cursor-pointer transition {{ !request('collection') ? 'bg-indigo-600 text-white font-bold shadow-xs' : 'text-gray-700 hover:bg-gray-100' }}">
+                                <span class="flex items-center gap-2">
+                                    <input type="radio" name="collection" value="" {{ !request('collection') ? 'checked' : '' }} onchange="this.form.submit()" class="hidden">
+                                    <span class="w-2 h-2 rounded-full {{ !request('collection') ? 'bg-white' : 'bg-gray-300' }}"></span>
+                                    <span>All Collections</span>
+                                </span>
+                            </label>
+
+                            @foreach($collections as $col)
+                                @php $isActive = request('collection') === $col->slug; @endphp
+                                <label class="group flex items-center justify-between px-3 py-2 rounded-xl text-xs cursor-pointer transition {{ $isActive ? 'bg-indigo-600 text-white font-bold shadow-xs' : 'text-gray-700 hover:bg-gray-100' }}">
+                                    <span class="flex items-center gap-2 truncate">
+                                        <input type="radio" name="collection" value="{{ $col->slug }}" {{ $isActive ? 'checked' : '' }} onchange="this.form.submit()" class="hidden">
+                                        <span class="w-2 h-2 rounded-full shrink-0 {{ $isActive ? 'bg-white' : 'bg-gray-300' }}"></span>
+                                        <span class="truncate">{{ $col->name }}</span>
+                                    </span>
+                                    <span class="text-[11px] px-2 py-0.5 rounded-full shrink-0 ml-1 {{ $isActive ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500' }}">
+                                        {{ $col->products_count }}
+                                    </span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
                 <!-- Stock Availability -->
                 <div class="pt-4 border-t border-gray-100">
                     <span class="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2">Availability</span>
@@ -187,108 +228,189 @@
                     Showing <strong class="text-gray-900">{{ $products->count() }}</strong> of <strong class="text-gray-900">{{ $products->total() }}</strong> hardware items
                 </div>
 
-                <div class="flex items-center gap-3">
+                <form id="sortForm" method="GET" action="{{ route('shop') }}" class="flex items-center gap-3 m-0">
+                    {{-- Preserve existing filters in GET query --}}
+                    @foreach(request()->except(['sort', 'page']) as $queryKey => $queryVal)
+                        @if(is_array($queryVal))
+                            @foreach($queryVal as $itemVal)
+                                <input type="hidden" name="{{ $queryKey }}[]" value="{{ $itemVal }}">
+                            @endforeach
+                        @elseif(!is_null($queryVal) && $queryVal !== '')
+                            <input type="hidden" name="{{ $queryKey }}" value="{{ $queryVal }}">
+                        @endif
+                    @endforeach
+
                     <label for="sort-select" class="text-xs font-bold text-gray-500 whitespace-nowrap">Sort by:</label>
-                    <select
-                        id="sort-select"
-                        onchange="const u = new URL(window.location); u.searchParams.set('sort', this.value); window.location = u.toString();"
-                        class="text-xs font-semibold py-2 pl-3 pr-8 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                        <option value="newest" {{ $sort === 'newest' ? 'selected' : '' }}>Newest Arrivals</option>
-                        <option value="price_asc" {{ $sort === 'price_asc' ? 'selected' : '' }}>Price: Low to High</option>
-                        <option value="price_desc" {{ $sort === 'price_desc' ? 'selected' : '' }}>Price: High to Low</option>
-                        <option value="name_asc" {{ $sort === 'name_asc' ? 'selected' : '' }}>Name: A to Z</option>
-                    </select>
-                </div>
+                    <div class="relative">
+                        <select
+                            id="sort-select"
+                            name="sort"
+                            onchange="this.form.submit()"
+                            class="text-xs font-semibold py-2 pl-3 pr-8 bg-gray-50 hover:bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer shadow-2xs transition"
+                        >
+                            <option value="newest" {{ $sort === 'newest' ? 'selected' : '' }}>Newest Arrivals</option>
+                            <option value="bestseller" {{ in_array($sort, ['bestseller', 'best_seller', 'bestsellers', 'best_selling']) ? 'selected' : '' }}>Best Sellers</option>
+                            <option value="price_asc" {{ $sort === 'price_asc' ? 'selected' : '' }}>Price: Low to High</option>
+                            <option value="price_desc" {{ $sort === 'price_desc' ? 'selected' : '' }}>Price: High to Low</option>
+                            <option value="name_asc" {{ $sort === 'name_asc' ? 'selected' : '' }}>Name: A to Z</option>
+                            <option value="name_desc" {{ $sort === 'name_desc' ? 'selected' : '' }}>Name: Z to A</option>
+                        </select>
+                    </div>
+                </form>
             </div>
 
             <!-- Product Grid: 1 col on mobile, 2 cols on tablet, 3 cols on desktop -->
+            @php
+                $userFavoriteIds = \App\Models\Favorite::getFavoriteIds();
+            @endphp
             <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                 @forelse($products as $product)
-                    <div class="group bg-white rounded-2xl border border-gray-200 hover:border-blue-500 hover:shadow-lg transition duration-200 flex flex-col justify-between overflow-hidden">
-                        <div class="p-5">
-                            <!-- Top Brand & Stock Indicator -->
-                            <div class="flex items-center justify-between gap-2 mb-3">
-                                <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md uppercase tracking-wider">
-                                    {{ $product->brand?->name ?? 'Genuine' }}
+                    <div class="group bg-white rounded-2xl border border-slate-200 hover:border-blue-500 hover:shadow-xl hover:shadow-blue-500/10 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between overflow-hidden relative">
+                        <!-- Floating Favorite Button -->
+                        <button
+                            type="button"
+                            onclick="window.toggleFavorite({{ $product->id }}, this)"
+                            data-product-id="{{ $product->id }}"
+                            class="favorite-toggle-btn absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-white/95 backdrop-blur-sm border border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 hover:scale-110 flex items-center justify-center transition shadow-2xs cursor-pointer"
+                            title="Save to favorites"
+                            aria-label="Save to favorites"
+                        >
+                            <i class="bi {{ in_array($product->id, $userFavoriteIds, true) ? 'bi-heart-fill text-rose-600' : 'bi-heart' }} text-xs"></i>
+                        </button>
+
+                        <div class="p-4 sm:p-5 flex flex-col flex-grow">
+                            <!-- Top Row: Brand & Stock Status -->
+                            <div class="flex items-center justify-between gap-2 mb-2.5 pr-8">
+                                <span class="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider group-hover:text-blue-600 transition truncate">
+                                    {{ $product->brand?->name ?? 'Genuine Part' }}
                                 </span>
-                                @if($product->stock_quantity <= 0)
-                                    <span class="text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
-                                        Out of Stock
-                                    </span>
-                                @elseif($product->stock_quantity <= $product->low_stock_threshold)
-                                    <span class="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
-                                        Only {{ $product->stock_quantity }} Left
-                                    </span>
-                                @else
-                                    <span class="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                                        In Stock ({{ $product->stock_quantity }})
-                                    </span>
-                                @endif
+
+                                <div class="shrink-0">
+                                    @if($product->stock_quantity <= 0)
+                                        <span class="inline-flex items-center gap-1.5 text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200/80 px-2 py-0.5 rounded-full">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                            Out of Stock
+                                        </span>
+                                    @elseif($product->stock_quantity <= $product->low_stock_threshold)
+                                        <span class="inline-flex items-center gap-1.5 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-full">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                            Only {{ $product->stock_quantity }} Left
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                            In Stock
+                                        </span>
+                                    @endif
+                                </div>
                             </div>
 
-                            <!-- Hardware Visual Card -->
-                            <a href="{{ route('product.show', $product->slug) }}" class="block">
-                                <div class="h-44 bg-gradient-to-b from-gray-50 to-gray-100 rounded-xl border border-gray-100 flex flex-col items-center justify-center p-4 relative overflow-hidden group-hover:scale-[1.01] transition">
-                                    @if($product->sale_price)
-                                        <span class="absolute top-2.5 left-2.5 bg-rose-600 text-white text-[11px] font-extrabold px-2 py-0.5 rounded-md shadow-xs">
+                            <!-- Product Image Container -->
+                            <a href="{{ route('product.show', $product->slug) }}" class="block relative my-1">
+                                <div class="w-full aspect-[4/3] bg-slate-50/90 rounded-xl border border-slate-100 flex items-center justify-center p-3 relative overflow-hidden group-hover:bg-blue-50/20 transition-colors">
+                                    @if($product->sale_price && $product->price > $product->sale_price)
+                                        <span class="absolute top-2.5 left-2.5 z-10 inline-flex items-center gap-1 bg-gradient-to-r from-rose-600 to-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-xs uppercase tracking-wider">
+                                            <i class="bi bi-tag-fill text-[9px]"></i>
                                             SAVE ${{ number_format($product->price - $product->sale_price, 0) }}
                                         </span>
                                     @endif
 
-                                    <div class="w-16 h-16 rounded-2xl bg-white text-blue-600 flex items-center justify-center mb-2 shadow-xs">
-                                        <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
-                                    </div>
-                                    <span class="text-[11px] font-mono font-bold text-gray-500 uppercase">{{ $product->sku }}</span>
-                                    <span class="text-[10px] text-gray-400 mt-0.5">{{ $product->category->name }}</span>
+                                    @if($product->primary_image_url)
+                                        <img 
+                                            src="{{ $product->primary_image_url }}" 
+                                            alt="{{ $product->name }}" 
+                                            class="w-full h-full object-contain p-1 group-hover:scale-105 transition-transform duration-300 ease-out"
+                                            loading="lazy"
+                                            onerror="this.onerror=null; this.parentElement.classList.add('flex-col'); this.innerHTML='<div class=\'w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-1.5 shadow-xs\'><i class=\'bi bi-cpu fs-3\'></i></div><span class=\'text-[10px] font-bold text-gray-400 uppercase tracking-wider\'>{{ $product->sku }}</span>';"
+                                        >
+                                    @else
+                                        <div class="flex flex-col items-center justify-center text-center">
+                                            <div class="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-1.5 shadow-xs">
+                                                <i class="bi bi-cpu fs-3"></i>
+                                            </div>
+                                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{{ $product->sku }}</span>
+                                        </div>
+                                    @endif
                                 </div>
-
-                                <h3 class="mt-4 font-extrabold text-gray-900 text-sm leading-snug group-hover:text-blue-600 transition line-clamp-2">
-                                    {{ $product->name }}
-                                </h3>
                             </a>
 
-                            <!-- Hardware Specs Snapshot -->
+                            <!-- Category & SKU Meta -->
+                            <div class="flex items-center justify-between text-[11px] font-medium mt-3 mb-1">
+                                <span class="text-blue-600 font-semibold truncate">{{ $product->category?->name ?? 'Components' }}</span>
+                                <span class="font-mono text-slate-400 text-[10px] shrink-0">SKU: {{ $product->sku }}</span>
+                            </div>
+
+                            <!-- Clamped Title for Uniform Row Alignment -->
+                            <h3 class="font-bold text-slate-900 text-sm leading-snug group-hover:text-blue-600 transition h-10 line-clamp-2" title="{{ $product->name }}">
+                                <a href="{{ route('product.show', $product->slug) }}">
+                                    {{ $product->name }}
+                                </a>
+                            </h3>
+
+                            <!-- Specifications Micro-Tags -->
                             @if(!empty($product->specifications))
-                                <div class="mt-3 flex flex-wrap gap-1.5">
+                                <div class="mt-2.5 flex flex-wrap gap-1.5 min-h-[26px]">
                                     @php $count = 0; @endphp
                                     @foreach($product->specifications as $k => $v)
                                         @if($count < 2)
-                                            <span class="text-[11px] bg-gray-50 border border-gray-200 text-gray-700 px-2 py-0.5 rounded-md font-medium">
-                                                {{ $k }}: <strong class="text-gray-900">{{ $v }}</strong>
+                                            <span class="inline-flex items-center gap-1 text-[10px] font-medium bg-slate-100 text-slate-700 border border-slate-200/80 px-2 py-0.5 rounded-md">
+                                                <span class="text-slate-400 font-normal">{{ $k }}:</span> 
+                                                <strong class="text-slate-800 font-semibold truncate max-w-[130px]">{{ $v }}</strong>
                                             </span>
                                             @php $count++; @endphp
                                         @endif
                                     @endforeach
                                 </div>
+                            @else
+                                <div class="min-h-[26px]"></div>
                             @endif
                         </div>
 
-                        <!-- Price & Action Section -->
-                        <div class="p-5 pt-0 mt-auto">
-                            <div class="flex items-baseline gap-2 mb-3">
-                                @if($product->sale_price)
-                                    <span class="text-2xl font-extrabold text-gray-900">${{ number_format($product->sale_price, 2) }}</span>
-                                    <span class="text-xs text-gray-400 line-through">${{ number_format($product->price, 2) }}</span>
-                                @else
-                                    <span class="text-2xl font-extrabold text-gray-900">${{ number_format($product->price, 2) }}</span>
+                        <!-- Price & Action Footer -->
+                        <div class="p-4 sm:p-5 pt-0 mt-auto border-t border-slate-100 bg-slate-50/50">
+                            <div class="flex items-baseline justify-between gap-2 pt-3 mb-3">
+                                <div class="flex items-baseline gap-2">
+                                    @if($product->sale_price)
+                                        <span class="text-xl font-black text-slate-900 tracking-tight">
+                                            ${{ number_format($product->sale_price, 2) }}
+                                        </span>
+                                        <span class="text-xs text-slate-400 line-through font-medium">
+                                            ${{ number_format($product->price, 2) }}
+                                        </span>
+                                    @else
+                                        <span class="text-xl font-black text-slate-900 tracking-tight">
+                                            ${{ number_format($product->price, 2) }}
+                                        </span>
+                                    @endif
+                                </div>
+
+                                @if($product->sale_price && $product->price > $product->sale_price)
+                                    @php $pct = round((($product->price - $product->sale_price) / $product->price) * 100); @endphp
+                                    <span class="text-[10px] font-black text-rose-700 bg-rose-50 border border-rose-200/80 px-1.5 py-0.5 rounded-md uppercase tracking-wide">
+                                        -{{ $pct }}% OFF
+                                    </span>
                                 @endif
                             </div>
 
-                            <div class="grid grid-cols-2 gap-2">
-                                <a href="{{ route('product.show', $product->slug) }}" class="text-center py-2.5 px-3 text-xs font-bold text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-xl border border-gray-200 transition">
-                                    View Specs
+                            <div class="grid grid-cols-5 gap-2">
+                                <a href="{{ route('product.show', $product->slug) }}" class="col-span-2 py-2.5 px-3 text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 hover:text-slate-900 rounded-xl transition flex items-center justify-center gap-1 border border-slate-200 shadow-2xs active:scale-95" title="View Full Specs">
+                                    <i class="bi bi-eye text-slate-500 text-xs"></i>
+                                    <span>Details</span>
                                 </a>
-                                <form action="{{ route('cart.add', $product->id) }}" method="POST">
+                                <form action="{{ route('cart.add', $product->id) }}" method="POST" class="col-span-3">
                                     @csrf
                                     <input type="hidden" name="quantity" value="1">
                                     <button
                                         type="submit"
                                         @if($product->stock_quantity <= 0) disabled @endif
-                                        class="w-full py-2.5 px-3 text-xs font-bold text-white rounded-xl transition flex items-center justify-center gap-1.5 {{ $product->stock_quantity > 0 ? 'bg-blue-600 hover:bg-blue-500 shadow-sm' : 'bg-gray-200 text-gray-400 cursor-not-allowed' }}"
+                                        class="w-full py-2.5 px-3 text-xs font-bold text-white rounded-xl transition flex items-center justify-center gap-1.5 shadow-sm active:scale-95 {{ $product->stock_quantity > 0 ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/20' : 'bg-slate-300 cursor-not-allowed text-slate-500' }}"
                                     >
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                                        <span>Add to Cart</span>
+                                        @if($product->stock_quantity > 0)
+                                            <i class="bi bi-cart-plus-fill text-xs"></i>
+                                            <span>+ Add</span>
+                                        @else
+                                            <span>Sold Out</span>
+                                        @endif
                                     </button>
                                 </form>
                             </div>
@@ -311,10 +433,22 @@
             </div>
 
             <!-- Pagination Bar -->
-            <div class="pt-4">
-                {{ $products->links() }}
+            <div class="pt-6 border-t border-slate-200">
+                {{ $products->links('vendor.pagination.storefront') }}
             </div>
         </main>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var sortSelect = document.getElementById('sort-select');
+        var sortForm = document.getElementById('sortForm');
+        if (sortSelect && sortForm) {
+            sortSelect.addEventListener('change', function () {
+                sortForm.submit();
+            });
+        }
+    });
+</script>
 @endsection

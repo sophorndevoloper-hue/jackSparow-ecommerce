@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 530 140" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <!-- Modern Metallic & Cyan Tech Gradients -->
+    <linearGradient id="cyberBlue" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="100%" stop-color="#0ea5e9" />
+    </linearGradient>
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#0284c7" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <g id="jacksparrow-brand">
+    <!-- Emblem Icon -->
+    <g transform="translate(10, 6)" filter="url(#softGlow)">
+      <image href="/assets/images/brand/logo/jacksparrow-icon.png" x="0" y="0" width="128" height="128" />
+    </g>
+
+    <!-- Company Name & Typography Lockup -->
+    <g transform="translate(160, 76)">
+      <!-- Primary Brandmark Title -->
+      <text x="0" y="0" 
+            font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Inter, sans-serif" 
+            font-size="36" 
+            font-weight="900" 
+            letter-spacing="0.02em" 
+            fill="#0f172a"
+            style="text-transform: uppercase;">JACK<tspan fill="url(#cyberBlue)">SPARROW</tspan></text>
+      
+      <!-- Subtitle & B2B Category Description -->
+      <text x="2" y="28" 
+            font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Inter, sans-serif" 
+            font-size="12.5" 
+            font-weight="600" 
+            letter-spacing="0.28em" 
+            fill="#475569"
+            style="text-transform: uppercase; opacity: 0.95;">B2B COMPUTER PARTS</text>
+    </g>
+  </g>
+</svg>

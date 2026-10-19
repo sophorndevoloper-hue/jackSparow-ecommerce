@@ -84,9 +84,6 @@ class BackendMenuSeeder extends Seeder
             }
         }
 
-        $validSlugs = array_column($definitions, 'slug');
-        AdminMenu::whereNotIn('slug', $validSlugs)->delete();
-
         // Map core permissions to their menus
         $dashMenu = AdminMenu::where('slug', 'dashboard')->first();
         if ($dashMenu) {
@@ -104,7 +101,9 @@ class BackendMenuSeeder extends Seeder
         $menuSetupMenu = AdminMenu::where('slug', 'menu_setup')->first();
         if ($menuSetupMenu) {
             $menuPermMap['view menus'] = $menuSetupMenu->id;
+            $menuPermMap['create menus'] = $menuSetupMenu->id;
             $menuPermMap['edit menus'] = $menuSetupMenu->id;
+            $menuPermMap['delete menus'] = $menuSetupMenu->id;
             $menuPermMap['view settings'] = $menuSetupMenu->id;
             $menuPermMap['edit settings'] = $menuSetupMenu->id;
         }

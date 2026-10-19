@@ -13,7 +13,7 @@
                         </ol>
                     </nav>
                     <h1 class="h3 mb-1">Edit Menu: {{ $menu->title }}</h1>
-                    <p class="text-muted mb-0">Adjust navigation label, section category, icon, sort order, and visibility.</p>
+                    <p class="text-muted mb-0">Adjust navigation label, parent menu, icon, sort order, and visibility.</p>
                 </div>
             </div>
             <div class="heading-actions">
@@ -49,30 +49,72 @@
                             <small class="text-muted">Displayed as the navigation label in the admin sidebar.</small>
                         </div>
 
-                        <input type="hidden" name="route_name" value="{{ $menu->route_name }}">
-                        <input type="hidden" name="view_permission" value="{{ $menu->view_permission }}">
-
-                        @if(! $menu->isParentDropdown() && ! empty($menu->route_name))
-                            <div class="mb-3">
-                                <label class="form-label small fw-bold text-muted"><i class="bi bi-link-45deg me-1"></i> System Route Target</label>
-                                <div class="p-2 bg-light-subtle border rounded font-monospace small text-primary d-flex align-items-center justify-content-between">
-                                    <span><i class="bi bi-lock-fill text-muted me-2"></i>{{ $menu->route_name }}</span>
-                                    <span class="badge bg-secondary-subtle text-secondary border" style="font-size: 10px;">Fixed System Route</span>
-                                </div>
-                                <small class="text-muted">Managed by system routing.</small>
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <label class="form-label small fw-bold mb-0" for="route_name">
+                                    <i class="bi bi-link-45deg me-1 text-primary"></i> System Route Target
+                                </label>
+                                @if(! empty($menu->route_name))
+                                    <button type="button" class="btn btn-link btn-sm text-danger p-0 font-monospace text-decoration-none" style="font-size: 11.5px;" onclick="document.getElementById('route_name').value = '';">
+                                        <i class="bi bi-x-circle me-1"></i> Clear Route
+                                    </button>
+                                @endif
                             </div>
-                        @endif
+                            <div class="input-group">
+                                <span class="input-group-text font-monospace small text-muted"><i class="bi bi-compass"></i></span>
+                                <input type="text" 
+                                       name="route_name" 
+                                       id="route_name" 
+                                       class="form-control font-monospace @error('route_name') is-invalid @enderror" 
+                                       value="{{ old('route_name', $menu->route_name) }}" 
+                                       placeholder="e.g. admin.products.index (leave empty to remove route)">
+                            </div>
+                            <small class="text-muted">Named Laravel route. Clear this route if you wish to allow deleting this menu item.</small>
+                            @error('route_name')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold" for="view_permission">
+                                <i class="bi bi-shield-check me-1 text-primary"></i> View Permission
+                            </label>
+                            <input list="permissionsList" name="view_permission" id="view_permission" class="form-control font-monospace" value="{{ old('view_permission', $menu->view_permission) }}" placeholder="e.g. view orders (optional)">
+                            <datalist id="permissionsList">
+                                @foreach($availablePermissions as $perm)
+                                    <option value="{{ $perm->name }}">
+                                @endforeach
+                            </datalist>
+                            <small class="text-muted">Optional permission name required to view this menu item.</small>
+                        </div>
 
                         <div class="row g-3 mb-3">
                             <div class="col-12 col-md-6">
-                                <label class="form-label small fw-bold" for="section">Section Category <span class="text-danger">*</span></label>
-                                <select name="section" id="section" class="form-select" required>
-                                    <option value="Main" {{ old('section', $menu->section) === 'Main' ? 'selected' : '' }}>Main</option>
-                                    <option value="Inventory" {{ old('section', $menu->section) === 'Inventory' ? 'selected' : '' }}>Inventory</option>
-                                    <option value="Sales & Fulfillment" {{ old('section', $menu->section) === 'Sales & Fulfillment' ? 'selected' : '' }}>Sales & Fulfillment</option>
-                                    <option value="People" {{ old('section', $menu->section) === 'People' ? 'selected' : '' }}>People</option>
-                                    <option value="System Access" {{ old('section', $menu->section) === 'System Access' ? 'selected' : '' }}>System Access</option>
+                                <label class="form-label small fw-bold" for="parent_slug">
+                                    <i class="bi bi-diagram-2 me-1 text-primary"></i> Parent Menu
+                                </label>
+                                @php
+                                    $hasChildren = \App\Models\AdminMenu::where('parent_slug', $menu->slug)->exists();
+                                @endphp
+                                <select name="parent_slug" id="parent_slug" class="form-select @error('parent_slug') is-invalid @enderror" {{ $hasChildren ? 'disabled' : '' }}>
+                                    <option value="">-- None (Top-Level Menu) --</option>
+                                    @foreach($parentMenus as $parent)
+                                        <option value="{{ $parent->slug }}" {{ old('parent_slug', $menu->parent_slug) === $parent->slug ? 'selected' : '' }}>
+                                            {{ $parent->title }}
+                                        </option>
+                                    @endforeach
                                 </select>
+                                @if($hasChildren)
+                                    <input type="hidden" name="parent_slug" value="">
+                                    <small class="text-warning d-block mt-1">
+                                        <i class="bi bi-info-circle me-1"></i> This menu is currently a parent group with sub-items.
+                                    </small>
+                                @else
+                                    <small class="text-muted">Select a parent menu to nest this item, or choose Top-Level.</small>
+                                @endif
+                                @error('parent_slug')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
                             </div>
 
                             <div class="col-12 col-md-6">
@@ -101,13 +143,20 @@
                             </small>
                         </div>
 
-                        <div class="mt-4 pt-3 border-top d-flex gap-2">
-                            <button type="submit" class="btn btn-primary px-4 fw-bold">
-                                <i class="bi bi-save me-1"></i> Save Changes
-                            </button>
-                            <a href="{{ route('admin.menus.index') }}" class="btn btn-outline-secondary">
-                                Cancel
-                            </a>
+                        <div class="mt-4 pt-3 border-top d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary px-4 fw-bold">
+                                    <i class="bi bi-save me-1"></i> Save Changes
+                                </button>
+                                <a href="{{ route('admin.menus.index') }}" class="btn btn-outline-secondary">
+                                    Cancel
+                                </a>
+                            </div>
+                            @if(! \App\Models\AdminMenu::isProtected($menu))
+                                <button type="button" class="btn btn-outline-danger" onclick="if(confirm('Are you sure you want to delete menu \'{{ $menu->title }}\'?')) { document.getElementById('delete-menu-form').submit(); }">
+                                    <i class="bi bi-trash me-1"></i> Delete Menu
+                                </button>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -170,5 +219,12 @@
                 </div>
             </div>
         </form>
+
+        @if(! \App\Models\AdminMenu::isProtected($menu))
+            <form id="delete-menu-form" action="{{ route('admin.menus.destroy', $menu->id) }}" method="POST" class="d-none">
+                @csrf
+                @method('DELETE')
+            </form>
+        @endif
     </div>
 </x-app-layout>

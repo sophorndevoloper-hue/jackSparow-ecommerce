@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Backend\Delivery;
+use App\Models\Frontend\FrontendUser;
 use Database\Factories\OrderFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -9,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
     'order_number',
@@ -21,6 +24,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'status',
     'payment_status',
     'payment_method',
+    'payment_due_date',
+    'shipping_method_id',
     'subtotal',
     'tax_amount',
     'shipping_fee',
@@ -44,6 +49,7 @@ class Order extends Model
     protected function casts(): array
     {
         return [
+            'payment_due_date' => 'date',
             'subtotal' => 'decimal:2',
             'tax_amount' => 'decimal:2',
             'shipping_fee' => 'decimal:2',
@@ -95,6 +101,36 @@ class Order extends Model
     }
 
     /**
+     * Deliveries tracking for this order.
+     *
+     * @return HasMany<Delivery, $this>
+     */
+    public function deliveries(): HasMany
+    {
+        return $this->hasMany(Delivery::class);
+    }
+
+    /**
+     * Latest delivery for this order.
+     *
+     * @return HasOne<Delivery, $this>
+     */
+    public function delivery(): HasOne
+    {
+        return $this->hasOne(Delivery::class)->latestOfMany();
+    }
+
+    /**
+     * Selected shipping method for this order.
+     *
+     * @return BelongsTo<ShippingMethod, $this>
+     */
+    public function shippingMethod(): BelongsTo
+    {
+        return $this->belongsTo(ShippingMethod::class);
+    }
+
+    /**
      * Scope query by order status.
      *
      * @param  Builder<Order>  $query
@@ -112,5 +148,51 @@ class Order extends Model
     public function scopePaymentStatus(Builder $query, string $status): Builder
     {
         return $query->where('payment_status', $status);
+    }
+
+    /**
+     * Hardware serial numbers attached to this order.
+     *
+     * @return HasMany<SerialNumber, $this>
+     */
+    public function serialNumbers(): HasMany
+    {
+        return $this->hasMany(SerialNumber::class, 'order_id');
+    }
+
+    /**
+     * Total count of serial-tracked items required for this order.
+     */
+    public function totalSerialTrackingRequiredCount(): int
+    {
+        $count = 0;
+        foreach ($this->items as $item) {
+            if ($item->requiresSerialTracking()) {
+                $count += $item->quantity;
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * Total count of serial numbers currently attached to this order.
+     */
+    public function totalSerialsAttachedCount(): int
+    {
+        return $this->serialNumbers()->count();
+    }
+
+    /**
+     * Whether all required hardware serials are scanned and attached.
+     */
+    public function isReadyForShipment(): bool
+    {
+        $required = $this->totalSerialTrackingRequiredCount();
+        if ($required === 0) {
+            return true;
+        }
+
+        return $this->totalSerialsAttachedCount() >= $required;
     }
 }

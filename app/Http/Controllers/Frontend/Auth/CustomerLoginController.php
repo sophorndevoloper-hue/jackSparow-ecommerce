@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Frontend\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\Favorite;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -44,7 +45,29 @@ class CustomerLoginController extends Controller
             ]);
         }
 
+        $authenticatedCustomer = Auth::guard('frontend')->user();
+        if ($authenticatedCustomer && $authenticatedCustomer->is_blocked) {
+            Auth::guard('frontend')->logout();
+
+            throw ValidationException::withMessages([
+                'email' => 'Your customer account has been suspended or blocked. Please contact customer support.',
+            ]);
+        }
+
+        $guestFavorites = array_map('intval', session('favorites', []));
+
         $request->session()->regenerate();
+
+        if (! empty($guestFavorites)) {
+            $customerId = Auth::guard('frontend')->id();
+            foreach ($guestFavorites as $favProductId) {
+                Favorite::firstOrCreate([
+                    'frontend_user_id' => $customerId,
+                    'product_id' => $favProductId,
+                ]);
+            }
+            $request->session()->forget('favorites');
+        }
 
         return redirect()->intended(route('home'));
     }
@@ -56,8 +79,13 @@ class CustomerLoginController extends Controller
     {
         Auth::guard('frontend')->logout();
 
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        // Preserve backend admin session if an administrator is also logged in
+        if (Auth::guard('backend')->check()) {
+            $request->session()->regenerateToken();
+        } else {
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
 
         return redirect()->route('home');
     }

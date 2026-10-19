@@ -2,7 +2,8 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\AdminMenu;
+use App\Models\Backend\AdminMenu;
+use App\Models\Backend\Permission;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -11,7 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
 class CheckBackendPermission
 {
     /**
-     * Handle an incoming request and control role/permission access before any menu action.
+     * Handle an incoming request.
      *
      * @param  Closure(Request): (Response)  $next
      */
@@ -38,7 +39,7 @@ class CheckBackendPermission
             return $next($request);
         }
 
-        // 4. Resolve route and check active status in Menu Setup
+        // 4. Resolve route and check active status in Menu Setup dynamically
         $routeName = $request->route() ? $request->route()->getName() : '';
         $menuSlug = $this->resolveMenuSlugFromRoute($routeName);
 
@@ -80,7 +81,8 @@ class CheckBackendPermission
     }
 
     /**
-     * Map a route name to its primary menu slug in Menu Setup.
+     * Map a route name dynamically to its primary menu slug in Menu Setup.
+     * Fully dynamic: automatically detects newly added menus without code changes.
      */
     protected function resolveMenuSlugFromRoute(?string $routeName): ?string
     {
@@ -88,241 +90,134 @@ class CheckBackendPermission
             return null;
         }
 
-        if (str_starts_with($routeName, 'admin.products.images.') || str_starts_with($routeName, 'admin.products.')) {
+        // 1. Direct dynamic match from AdminMenu routes and actions
+        $dynamicMap = AdminMenu::getDynamicRouteToMenuSlugMap();
+        if (isset($dynamicMap[$routeName])) {
+            return $dynamicMap[$routeName];
+        }
+
+        // 2. Dynamic resource prefix matching (e.g. admin.new_module.* -> new_module)
+        $parts = explode('.', $routeName);
+        if (count($parts) >= 2) {
+            $prefix = $parts[0].'.'.$parts[1].'.';
+            foreach ($dynamicMap as $rName => $slug) {
+                if (str_starts_with($rName, $prefix)) {
+                    return $slug;
+                }
+            }
+        }
+
+        // 3. Fallback for nested sub-modules
+        if (str_starts_with($routeName, 'admin.products.images.')) {
             return 'products';
         }
-        if (str_starts_with($routeName, 'admin.categories.')) {
-            return 'categories';
-        }
-        if (str_starts_with($routeName, 'admin.brands.')) {
-            return 'brands';
-        }
-        if (str_starts_with($routeName, 'admin.makes.')) {
-            return 'makes';
-        }
-        if (str_starts_with($routeName, 'admin.stock.adjustments.') || str_starts_with($routeName, 'admin.stock.transfers.') || str_starts_with($routeName, 'admin.stock.') || str_starts_with($routeName, 'admin.serial-numbers.')) {
+        if (str_starts_with($routeName, 'admin.stock.adjustments.') || str_starts_with($routeName, 'admin.stock.transfers.') || str_starts_with($routeName, 'admin.serial-numbers.')) {
             return 'stock';
         }
-        if (str_starts_with($routeName, 'admin.warehouses.')) {
-            return 'warehouses';
-        }
-        if (str_starts_with($routeName, 'admin.orders.')) {
-            return 'orders';
-        }
-        if (str_starts_with($routeName, 'admin.customer-groups.')) {
-            return 'customer_groups';
-        }
-        if (str_starts_with($routeName, 'admin.customers.')) {
-            return 'customers';
-        }
-        if (str_starts_with($routeName, 'admin.suppliers.')) {
-            return 'suppliers';
-        }
-        if (str_starts_with($routeName, 'admin.users.')) {
-            return 'users';
-        }
-        if (str_starts_with($routeName, 'admin.roles.')) {
-            return 'roles';
-        }
-        if (str_starts_with($routeName, 'admin.permissions.')) {
-            return 'permissions';
-        }
-        if (str_starts_with($routeName, 'admin.menus.')) {
-            return 'menu_setup';
-        }
-        if (str_starts_with($routeName, 'admin.activity-logs.')) {
-            return 'activity-logs';
-        }
-        if (str_starts_with($routeName, 'admin.cache.')) {
-            return null;
+        if (str_starts_with($routeName, 'admin.website-settings.') || str_starts_with($routeName, 'admin.storefront-menus.') || str_starts_with($routeName, 'admin.website-products.')) {
+            return 'website_setup';
         }
 
         return null;
     }
 
     /**
-     * Auto-resolve required permissions based on route name and HTTP method.
+     * Auto-resolve required permissions dynamically based on Menu Setup, Spatie DB records, and REST conventions.
+     * Fully dynamic: automatically discovers required permissions for newly added menus without code changes.
      *
      * @return array<int, string>
      */
-    protected function resolvePermissionsFromRoute(?string $routeName, string $method): array
+    protected function resolvePermissionsFromRoute(?string $routeName, string $method = 'GET'): array
     {
         if (! $routeName) {
             return [];
         }
 
-        // Dashboard & Profile (no permission required for authenticated admin users)
-        if ($routeName === 'admin.dashboard' || str_starts_with($routeName, 'admin.profile.')) {
+        // 1. Free administrative routes (no permission check required)
+        if ($routeName === 'admin.dashboard' || str_starts_with($routeName, 'admin.profile.') || str_starts_with($routeName, 'admin.cache.')) {
             return [];
         }
 
-        // System Maintenance / Clear Cache (no permission required for authenticated admin users)
-        if (str_starts_with($routeName, 'admin.cache.')) {
-            return [];
+        // 2. Check explicit fallback rules for compound permissions & non-standard action names
+        $fallback = $this->resolveFallbackPermissions($routeName);
+        if (! empty($fallback)) {
+            return $fallback;
         }
 
-        // Products
-        if (in_array($routeName, ['admin.products.index', 'admin.products.show'])) {
-            return ['view products', 'create products', 'edit products', 'delete products'];
-        }
-        if (in_array($routeName, ['admin.products.create', 'admin.products.store'])) {
-            return ['create products'];
-        }
-        if (in_array($routeName, ['admin.products.edit', 'admin.products.update']) || str_starts_with($routeName, 'admin.products.images.')) {
-            return ['edit products', 'create products'];
-        }
-        if ($routeName === 'admin.products.destroy') {
-            return ['delete products'];
+        // 3. Dynamic lookup from AdminMenu actions and view_permissions
+        $dynamicPermMap = AdminMenu::getDynamicRoutePermissionMap();
+        if (isset($dynamicPermMap[$routeName]) && ! empty($dynamicPermMap[$routeName])) {
+            return $dynamicPermMap[$routeName];
         }
 
-        // Categories
-        if (in_array($routeName, ['admin.categories.index', 'admin.categories.show'])) {
-            return ['view categories', 'create categories', 'edit categories', 'delete categories'];
-        }
-        if (in_array($routeName, ['admin.categories.create', 'admin.categories.store'])) {
-            return ['create categories'];
-        }
-        if (in_array($routeName, ['admin.categories.edit', 'admin.categories.update'])) {
-            return ['edit categories'];
-        }
-        if ($routeName === 'admin.categories.destroy') {
-            return ['delete categories'];
+        // 4. Dynamic lookup from database Permission action_route column
+        $dbActionPerms = Permission::where('guard_name', 'backend')
+            ->where('action_route', $routeName)
+            ->pluck('name')
+            ->toArray();
+        if (! empty($dbActionPerms)) {
+            return $dbActionPerms;
         }
 
-        // Brands
-        if (in_array($routeName, ['admin.brands.index', 'admin.brands.show'])) {
-            return ['view brands', 'create brands', 'edit brands', 'delete brands'];
-        }
-        if (in_array($routeName, ['admin.brands.create', 'admin.brands.store'])) {
-            return ['create brands'];
-        }
-        if (in_array($routeName, ['admin.brands.edit', 'admin.brands.update'])) {
-            return ['edit brands'];
-        }
-        if ($routeName === 'admin.brands.destroy') {
-            return ['delete brands'];
-        }
+        // 5. Dynamic standard REST convention inference for newly added menus
+        // E.g., 'admin.coupons.store' -> extracts 'coupons' and 'store' -> pairs with 'create coupons'
+        $parts = explode('.', $routeName);
+        if (count($parts) >= 3 && $parts[0] === 'admin') {
+            $resource = str_replace(['-', '_'], ' ', $parts[1]);
+            $action = end($parts);
 
-        // Makes
-        if (in_array($routeName, ['admin.makes.index', 'admin.makes.show'])) {
-            return ['view makes', 'create makes', 'edit makes', 'delete makes'];
-        }
-        if (in_array($routeName, ['admin.makes.create', 'admin.makes.store'])) {
-            return ['create makes'];
-        }
-        if (in_array($routeName, ['admin.makes.edit', 'admin.makes.update'])) {
-            return ['edit makes'];
-        }
-        if ($routeName === 'admin.makes.destroy') {
-            return ['delete makes'];
-        }
+            $candidatePerms = match ($action) {
+                'create', 'store' => ["create {$resource}"],
+                'edit', 'update' => ["edit {$resource}"],
+                'destroy' => ["delete {$resource}"],
+                'index', 'show' => ["view {$resource}"],
+                default => [],
+            };
 
-        // Warehouses
-        if (str_starts_with($routeName, 'admin.warehouses.')) {
-            if ($routeName === 'admin.warehouses.destroy') {
-                return ['delete warehouses'];
+            if (! empty($candidatePerms)) {
+                $matchingPerms = Permission::where('guard_name', 'backend')
+                    ->whereIn('name', $candidatePerms)
+                    ->pluck('name')
+                    ->toArray();
+
+                if (! empty($matchingPerms)) {
+                    return $matchingPerms;
+                }
             }
-            if (in_array($routeName, ['admin.warehouses.create', 'admin.warehouses.store'])) {
-                return ['create warehouses'];
-            }
-            if (in_array($routeName, ['admin.warehouses.edit', 'admin.warehouses.update'])) {
-                return ['edit warehouses'];
-            }
-
-            return ['view warehouses', 'create warehouses', 'edit warehouses', 'delete warehouses'];
         }
 
-        // Stock
-        if (str_starts_with($routeName, 'admin.stock.')) {
-            if (str_contains($routeName, 'destroy')) {
-                return ['delete stock', 'delete products'];
-            }
-            if (str_contains($routeName, 'create') || str_contains($routeName, 'store')) {
-                return ['create stock', 'create products', 'edit stock', 'edit products'];
-            }
-            if (str_contains($routeName, 'edit') || str_contains($routeName, 'update') || str_contains($routeName, 'status')) {
-                return ['edit stock', 'edit products'];
-            }
+        return [];
+    }
 
-            return ['view stock', 'view products', 'edit stock', 'edit products'];
-        }
-
-        // Serial Numbers
-        if (str_starts_with($routeName, 'admin.serial-numbers.')) {
-            if ($routeName === 'admin.serial-numbers.destroy') {
-                return ['delete stock', 'delete products', 'edit stock', 'edit products'];
-            }
-            if (in_array($routeName, ['admin.serial-numbers.store', 'admin.serial-numbers.import'])) {
-                return ['create stock', 'create products', 'edit stock', 'edit products'];
-            }
-            if ($routeName === 'admin.serial-numbers.update') {
-                return ['edit stock', 'edit products'];
-            }
-            if ($routeName === 'admin.serial-numbers.templates.download') {
-                return ['view stock', 'view products', 'create stock', 'create products', 'edit stock', 'edit products'];
-            }
-
-            return ['view stock', 'view products', 'edit stock', 'edit products'];
-        }
-
-        // Orders
-        if (in_array($routeName, ['admin.orders.index', 'admin.orders.show'])) {
-            return ['view orders', 'edit orders'];
-        }
-        if (str_starts_with($routeName, 'admin.orders.')) {
-            return ['edit orders'];
-        }
-
-        // Customer Groups
-        if (str_starts_with($routeName, 'admin.customer-groups.')) {
-            if ($routeName === 'admin.customer-groups.destroy') {
-                return ['delete customer groups', 'delete customers'];
-            }
-            if (in_array($routeName, ['admin.customer-groups.create', 'admin.customer-groups.store'])) {
-                return ['create customer groups', 'create customers'];
-            }
-            if (in_array($routeName, ['admin.customer-groups.edit', 'admin.customer-groups.update'])) {
-                return ['edit customer groups', 'edit customers'];
-            }
-
-            return ['view customer groups', 'view customers'];
-        }
-
-        // Customers
-        if (str_starts_with($routeName, 'admin.customers.')) {
-            return ['view customers', 'edit customers'];
-        }
-
-        // Suppliers
-        if (str_starts_with($routeName, 'admin.suppliers.')) {
-            if ($routeName === 'admin.suppliers.destroy') {
-                return ['delete suppliers', 'manage suppliers'];
-            }
-            if (in_array($routeName, ['admin.suppliers.create', 'admin.suppliers.store'])) {
-                return ['create suppliers', 'manage suppliers'];
-            }
-            if (in_array($routeName, ['admin.suppliers.edit', 'admin.suppliers.update'])) {
-                return ['edit suppliers', 'manage suppliers'];
-            }
-
-            return ['view suppliers', 'create suppliers', 'edit suppliers', 'delete suppliers', 'manage suppliers'];
-        }
-
-        // Users
+    /**
+     * Fallback rules for special, compound, or non-standard route names.
+     *
+     * @return array<int, string>
+     */
+    protected function resolveFallbackPermissions(string $routeName): array
+    {
+        // 1. Non-standard custom routes and audit logs
         if ($routeName === 'admin.users.toggle-approval') {
             return ['approve users', 'edit users', 'manage users'];
-        }
-        if ($routeName === 'admin.users.destroy') {
-            return ['delete users', 'manage users'];
-        }
-        if (in_array($routeName, ['admin.users.edit', 'admin.users.update'])) {
-            return ['edit users', 'manage users'];
         }
         if (in_array($routeName, ['admin.users.index', 'admin.users.show'])) {
             return ['view users', 'edit users', 'approve users', 'delete users', 'manage users'];
         }
+        if (str_starts_with($routeName, 'admin.users.')) {
+            if ($routeName === 'admin.users.destroy') {
+                return ['delete users', 'manage users'];
+            }
 
-        // Roles & Permissions Access Control
+            return ['edit users', 'manage users'];
+        }
+
+        if ($routeName === 'admin.customers.toggle-block') {
+            return ['block customers', 'edit customers'];
+        }
+        if ($routeName === 'admin.customers.toggle-special') {
+            return ['edit customers'];
+        }
+
         if (str_starts_with($routeName, 'admin.roles.') || str_starts_with($routeName, 'admin.permissions.')) {
             if (in_array($routeName, ['admin.roles.destroy', 'admin.permissions.destroy'])) {
                 return ['delete roles', 'delete permissions', 'manage roles', 'manage permissions'];
@@ -337,13 +232,99 @@ class CheckBackendPermission
             return ['view roles', 'view permissions', 'create roles', 'edit roles', 'delete roles', 'manage roles', 'manage permissions'];
         }
 
-        // Menu Setup & System Access
         if (str_starts_with($routeName, 'admin.menus.') || str_starts_with($routeName, 'admin.activity-logs.')) {
             if (in_array($routeName, ['admin.menus.index', 'admin.menus.show'])) {
                 return ['view menus', 'edit menus', 'view settings', 'edit settings'];
             }
 
             return ['edit menus', 'edit settings'];
+        }
+
+        if (str_starts_with($routeName, 'admin.user-history.')) {
+            if ($routeName === 'admin.user-history.clear') {
+                return ['delete activity logs', 'manage settings', 'manage users'];
+            }
+
+            return ['view user history', 'view users', 'view settings', 'manage users'];
+        }
+
+        if (str_starts_with($routeName, 'admin.products.')) {
+            if (in_array($routeName, ['admin.products.import', 'admin.products.import-preview', 'admin.products.import.template'])) {
+                return ['create products', 'edit products'];
+            }
+        }
+
+        if (str_starts_with($routeName, 'admin.stock.') || str_starts_with($routeName, 'admin.serial-numbers.')) {
+            if (str_contains($routeName, 'destroy')) {
+                return ['delete stock', 'delete products', 'edit stock', 'edit products'];
+            }
+            if (str_contains($routeName, 'create') || str_contains($routeName, 'store') || str_contains($routeName, 'import')) {
+                return ['create stock', 'create products', 'edit stock', 'edit products'];
+            }
+            if (str_contains($routeName, 'edit') || str_contains($routeName, 'update') || str_contains($routeName, 'status')) {
+                return ['edit stock', 'edit products'];
+            }
+
+            return ['view stock', 'view products', 'edit stock', 'edit products'];
+        }
+
+        if (str_starts_with($routeName, 'admin.pricing.')) {
+            if (in_array($routeName, ['admin.pricing.update', 'admin.pricing.recalculate'])) {
+                return ['edit pricing'];
+            }
+
+            return ['view pricing', 'edit pricing'];
+        }
+
+        if (str_starts_with($routeName, 'admin.fulfillment.')) {
+            if (in_array($routeName, ['admin.fulfillment.allocate', 'admin.fulfillment.ship', 'admin.fulfillment.cancel'])) {
+                return ['manage fulfillment', 'edit orders'];
+            }
+
+            return ['view fulfillment', 'manage fulfillment', 'view orders'];
+        }
+
+        if (str_starts_with($routeName, 'admin.reports.')) {
+            return ['view reports'];
+        }
+
+        if (str_starts_with($routeName, 'admin.staff-attendance.')) {
+            return ['manage attendance', 'view attendance'];
+        }
+
+        if (str_starts_with($routeName, 'admin.staff-salaries.')) {
+            return ['manage salaries', 'view salaries'];
+        }
+
+        if (str_starts_with($routeName, 'admin.website-settings.') || str_starts_with($routeName, 'admin.storefront-menus.') || str_starts_with($routeName, 'admin.website-products.')) {
+            if (in_array($routeName, ['admin.website-settings.update', 'admin.storefront-menus.store', 'admin.storefront-menus.update', 'admin.storefront-menus.destroy', 'admin.website-products.store', 'admin.website-products.update', 'admin.website-products.destroy'])) {
+                return ['edit website settings'];
+            }
+
+            return ['view website settings', 'edit website settings'];
+        }
+
+        // 2. Generic REST Resource Pattern:
+        // Automatically applies to Products, Categories, Brands, Models, Warehouses, Deliveries,
+        // Suppliers, Staff, Customer Groups, Shipping Methods, AND all new menus dynamically!
+        $parts = explode('.', $routeName);
+        if (count($parts) >= 3 && $parts[0] === 'admin') {
+            $resource = str_replace(['-', '_'], ' ', $parts[1]);
+            $action = end($parts);
+
+            // Sub-resource routes like admin.products.images.* or admin.quotes.item.delete
+            if (str_contains($routeName, '.images.')) {
+                return ["edit {$resource}", "create {$resource}"];
+            }
+
+            return match ($action) {
+                'index', 'show' => ["view {$resource}", "create {$resource}", "edit {$resource}", "delete {$resource}"],
+                'create', 'store' => ["create {$resource}"],
+                'edit', 'update' => ["edit {$resource}", "create {$resource}"],
+                'destroy', 'delete' => ["delete {$resource}"],
+                'toggle-status', 'status' => ["edit {$resource}"],
+                default => [],
+            };
         }
 
         return [];

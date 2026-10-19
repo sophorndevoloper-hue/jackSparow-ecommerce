@@ -15,6 +15,18 @@ class StoreProductRequest extends FormRequest
     }
 
     /**
+     * Prepare the data for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->boolean('requires_serial_tracking')) {
+            $this->merge([
+                'stock_quantity' => 0,
+            ]);
+        }
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, array<int, mixed>>
@@ -24,7 +36,7 @@ class StoreProductRequest extends FormRequest
         return [
             'category_id' => ['required', 'exists:categories,id'],
             'brand_id' => ['nullable', 'exists:brands,id'],
-            'make_id' => ['nullable', 'exists:makes,id'],
+            'model_id' => ['nullable', 'exists:product_models,id'],
             'name' => ['required', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:255', 'unique:products,slug'],
             'sku' => ['required', 'string', 'max:100', 'unique:products,sku'],

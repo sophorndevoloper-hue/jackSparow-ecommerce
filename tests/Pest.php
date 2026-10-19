@@ -1,6 +1,9 @@
 <?php
 
+use App\Models\StorefrontProduct;
+use App\Models\UserActivity;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 /*
@@ -16,6 +19,11 @@ use Tests\TestCase;
 
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
+    ->beforeEach(function () {
+        UserActivity::clearRecentlyLogged();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
+        StorefrontProduct::flushCache();
+    })
     ->in('Feature');
 
 /*

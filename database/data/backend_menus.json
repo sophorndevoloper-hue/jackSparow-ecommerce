@@ -33,7 +33,7 @@
   {
     "slug": "products_list",
     "parent_slug": "products",
-    "title": "All Products",
+    "title": "Products",
     "section": "Inventory",
     "route_name": "admin.products.index",
     "icon": "bi-list-ul",
@@ -64,10 +64,10 @@
   {
     "slug": "products_images",
     "parent_slug": "products",
-    "title": "Upload Product Img",
+    "title": "Product Image",
     "section": "Inventory",
     "route_name": "admin.products.images.index",
-    "icon": "bi-images",
+    "icon": "bi-image",
     "view_permission": "view products|create products|edit products",
     "sort_order": 13,
     "is_active": true,
@@ -79,20 +79,54 @@
     ]
   },
   {
-    "slug": "product_collections",
+    "slug": "categories",
     "parent_slug": "products",
-    "title": "Product Collections",
+    "title": "Categories",
     "section": "Inventory",
-    "route_name": "admin.collections.index",
-    "icon": "bi-collection",
-    "view_permission": "view collections",
+    "route_name": "admin.categories.index",
+    "icon": "bi-grid-3x3-gap",
+    "view_permission": "view categories",
     "sort_order": 14,
     "is_active": true,
     "actions": [
-      { "name": "View", "action_type": "view", "route_name": "admin.collections.index", "permission": "view collections" },
-      { "name": "Create", "action_type": "create", "route_name": "admin.collections.create", "permission": "create collections" },
-      { "name": "Edit", "action_type": "edit", "route_name": "admin.collections.edit", "permission": "edit collections" },
-      { "name": "Delete", "action_type": "delete", "route_name": "admin.collections.destroy", "permission": "delete collections" }
+      { "name": "View", "action_type": "view", "route_name": "admin.categories.index", "permission": "view categories" },
+      { "name": "Create", "action_type": "create", "route_name": "admin.categories.create", "permission": "create categories" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.categories.edit", "permission": "edit categories" },
+      { "name": "Delete", "action_type": "delete", "route_name": "admin.categories.destroy", "permission": "delete categories" }
+    ]
+  },
+  {
+    "slug": "brands",
+    "parent_slug": "products",
+    "title": "Brands",
+    "section": "Inventory",
+    "route_name": "admin.brands.index",
+    "icon": "bi-patch-check",
+    "view_permission": "view brands",
+    "sort_order": 15,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.brands.index", "permission": "view brands" },
+      { "name": "Create", "action_type": "create", "route_name": "admin.brands.create", "permission": "create brands" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.brands.edit", "permission": "edit brands" },
+      { "name": "Delete", "action_type": "delete", "route_name": "admin.brands.destroy", "permission": "delete brands" }
+    ]
+  },
+  {
+    "slug": "models",
+    "parent_slug": "products",
+    "title": "Models",
+    "section": "Inventory",
+    "route_name": "admin.models.index",
+    "icon": "bi-cpu",
+    "view_permission": "view models",
+    "sort_order": 16,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.models.index", "permission": "view models" },
+      { "name": "Create", "action_type": "create", "route_name": "admin.models.create", "permission": "create models" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.models.edit", "permission": "edit models" },
+      { "name": "Delete", "action_type": "delete", "route_name": "admin.models.destroy", "permission": "delete models" }
     ]
   },
   {
@@ -207,9 +241,9 @@
     "title": "Manage Warehouses",
     "section": "Inventory",
     "route_name": null,
-    "icon": "bi-buildings",
+    "icon": "bi-building",
     "view_permission": null,
-    "sort_order": 27,
+    "sort_order": 30,
     "is_active": true,
     "actions": []
   },
@@ -221,7 +255,7 @@
     "route_name": "admin.warehouses.index",
     "icon": "bi-list-ul",
     "view_permission": "view warehouses",
-    "sort_order": 28,
+    "sort_order": 31,
     "is_active": true,
     "actions": [
       { "name": "View", "action_type": "view", "route_name": "admin.warehouses.index", "permission": "view warehouses" },
@@ -238,88 +272,139 @@
     "route_name": "admin.warehouses.create",
     "icon": "bi-plus-circle",
     "view_permission": "create warehouses",
-    "sort_order": 29,
+    "sort_order": 32,
     "is_active": true,
     "actions": [
       { "name": "Create", "action_type": "create", "route_name": "admin.warehouses.create", "permission": "create warehouses" }
     ]
   },
   {
-    "slug": "categories",
+    "slug": "manage_sale",
     "parent_slug": null,
-    "title": "Categories",
-    "section": "Inventory",
-    "route_name": "admin.categories.index",
-    "icon": "bi-grid-3x3-gap",
-    "view_permission": "view categories",
-    "sort_order": 30,
-    "is_active": true,
-    "actions": [
-      { "name": "View", "action_type": "view", "route_name": "admin.categories.index", "permission": "view categories" },
-      { "name": "Create", "action_type": "create", "route_name": "admin.categories.create", "permission": "create categories" },
-      { "name": "Edit", "action_type": "edit", "route_name": "admin.categories.edit", "permission": "edit categories" },
-      { "name": "Delete", "action_type": "delete", "route_name": "admin.categories.destroy", "permission": "delete categories" }
-    ]
-  },
-  {
-    "slug": "brands",
-    "parent_slug": null,
-    "title": "Brands",
-    "section": "Inventory",
-    "route_name": "admin.brands.index",
-    "icon": "bi-patch-check",
-    "view_permission": "view brands",
-    "sort_order": 35,
-    "is_active": true,
-    "actions": [
-      { "name": "View", "action_type": "view", "route_name": "admin.brands.index", "permission": "view brands" },
-      { "name": "Create", "action_type": "create", "route_name": "admin.brands.create", "permission": "create brands" },
-      { "name": "Edit", "action_type": "edit", "route_name": "admin.brands.edit", "permission": "edit brands" },
-      { "name": "Delete", "action_type": "delete", "route_name": "admin.brands.destroy", "permission": "delete brands" }
-    ]
-  },
-  {
-    "slug": "makes",
-    "parent_slug": null,
-    "title": "Makes",
-    "section": "Inventory",
-    "route_name": "admin.makes.index",
-    "icon": "bi-tools",
-    "view_permission": "view makes",
-    "sort_order": 36,
-    "is_active": true,
-    "actions": [
-      { "name": "View", "action_type": "view", "route_name": "admin.makes.index", "permission": "view makes" },
-      { "name": "Create", "action_type": "create", "route_name": "admin.makes.create", "permission": "create makes" },
-      { "name": "Edit", "action_type": "edit", "route_name": "admin.makes.edit", "permission": "edit makes" },
-      { "name": "Delete", "action_type": "delete", "route_name": "admin.makes.destroy", "permission": "delete makes" }
-    ]
-  },
-  {
-    "slug": "orders",
-    "parent_slug": null,
-    "title": "Orders",
-    "section": "Sales & Fulfillment",
-    "route_name": "admin.orders.index",
-    "icon": "bi-cart-check",
-    "view_permission": "view orders",
+    "title": "Manage Sale",
+    "section": "Manage Sale",
+    "route_name": null,
+    "icon": "bi-graph-up-arrow",
+    "view_permission": null,
     "sort_order": 40,
     "is_active": true,
+    "actions": []
+  },
+  {
+    "slug": "quotes",
+    "parent_slug": "manage_sale",
+    "title": "Quotes & RFQ",
+    "section": "Manage Sale",
+    "route_name": "admin.quotes.index",
+    "icon": "bi-file-earmark-text",
+    "view_permission": "view quotes",
+    "sort_order": 41,
+    "is_active": true,
     "actions": [
-      { "name": "View", "action_type": "view", "route_name": "admin.orders.index", "permission": "view orders" },
-      { "name": "Edit", "action_type": "edit", "route_name": "admin.orders.status", "permission": "edit orders" },
-      { "name": "Delete", "action_type": "delete", "route_name": "admin.orders.index", "permission": "delete orders" }
+      { "name": "View", "action_type": "view", "route_name": "admin.quotes.index", "permission": "view quotes" },
+      { "name": "Create", "action_type": "create", "route_name": "admin.quotes.create", "permission": "create quotes" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.quotes.show", "permission": "edit quotes" }
     ]
+  },
+  {
+    "slug": "pricing",
+    "parent_slug": "manage_sale",
+    "title": "Dynamic Pricing",
+    "section": "Manage Sale",
+    "route_name": "admin.pricing.index",
+    "icon": "bi-calculator",
+    "view_permission": "view pricing",
+    "sort_order": 42,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.pricing.index", "permission": "view pricing" }
+    ]
+  },
+  {
+    "slug": "fulfillment",
+    "parent_slug": "manage_sale",
+    "title": "Order Fulfillment",
+    "section": "Manage Sale",
+    "route_name": "admin.fulfillment.index",
+    "icon": "bi-upc-scan",
+    "view_permission": "view fulfillment",
+    "sort_order": 43,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.fulfillment.index", "permission": "view fulfillment" },
+      { "name": "Process", "action_type": "edit", "route_name": "admin.fulfillment.show", "permission": "manage fulfillment" }
+    ]
+  },
+  {
+    "slug": "payment_methods",
+    "parent_slug": "manage_sale",
+    "title": "Payment Methods",
+    "section": "Manage Sale",
+    "route_name": "admin.payment-methods.index",
+    "icon": "bi-credit-card-2-front",
+    "view_permission": "view payment methods",
+    "sort_order": 44,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.payment-methods.index", "permission": "view payment methods" },
+      { "name": "Create", "action_type": "create", "route_name": "admin.payment-methods.create", "permission": "create payment methods" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.payment-methods.edit", "permission": "edit payment methods" },
+      { "name": "Delete", "action_type": "delete", "route_name": "admin.payment-methods.destroy", "permission": "delete payment methods" }
+    ]
+  },
+  {
+    "slug": "reports",
+    "parent_slug": "manage_sale",
+    "title": "Analytics & Reports",
+    "section": "Manage Sale",
+    "route_name": "admin.reports.index",
+    "icon": "bi-graph-up",
+    "view_permission": "view reports",
+    "sort_order": 45,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.reports.index", "permission": "view reports" },
+      { "name": "Export", "action_type": "view", "route_name": "admin.reports.export", "permission": "export reports" }
+    ]
+  },
+  {
+    "slug": "customer_group_payment_terms",
+    "parent_slug": "people",
+    "title": "Group Payment Terms",
+    "section": "People",
+    "route_name": "admin.customer-group-payment-terms.index",
+    "icon": "bi-calendar2-check",
+    "view_permission": "view customer group payment terms",
+    "sort_order": 53,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.customer-group-payment-terms.index", "permission": "view customer group payment terms" },
+      { "name": "Create", "action_type": "create", "route_name": "admin.customer-group-payment-terms.create", "permission": "create customer group payment terms" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.customer-group-payment-terms.edit", "permission": "edit customer group payment terms" },
+      { "name": "Delete", "action_type": "delete", "route_name": "admin.customer-group-payment-terms.destroy", "permission": "delete customer group payment terms" }
+    ]
+  },
+  {
+    "slug": "people",
+    "parent_slug": null,
+    "title": "People",
+    "section": "People",
+    "route_name": null,
+    "icon": "bi-people-fill",
+    "view_permission": null,
+    "sort_order": 50,
+    "is_active": true,
+    "actions": []
   },
   {
     "slug": "customer_groups",
-    "parent_slug": null,
+    "parent_slug": "people",
     "title": "Customer Groups (B2B)",
     "section": "People",
     "route_name": "admin.customer-groups.index",
-    "icon": "bi-tags-fill",
+    "icon": "bi-tag",
     "view_permission": "view customer groups",
-    "sort_order": 48,
+    "sort_order": 51,
     "is_active": true,
     "actions": [
       { "name": "View", "action_type": "view", "route_name": "admin.customer-groups.index", "permission": "view customer groups" },
@@ -330,30 +415,31 @@
   },
   {
     "slug": "customers",
-    "parent_slug": null,
-    "title": "Customers (Simple/VIP)",
+    "parent_slug": "people",
+    "title": "Customers",
     "section": "People",
     "route_name": "admin.customers.index",
-    "icon": "bi-person-badge-fill",
+    "icon": "bi-person-badge",
     "view_permission": "view customers",
-    "sort_order": 50,
+    "sort_order": 52,
     "is_active": true,
     "actions": [
       { "name": "View", "action_type": "view", "route_name": "admin.customers.index", "permission": "view customers" },
-      { "name": "Create", "action_type": "create", "route_name": "admin.customers.index", "permission": "create customers" },
-      { "name": "Edit", "action_type": "edit", "route_name": "admin.customers.toggle-special", "permission": "edit customers" },
-      { "name": "Delete", "action_type": "delete", "route_name": "admin.customers.index", "permission": "delete customers" }
+      { "name": "Create", "action_type": "create", "route_name": "admin.customers.create", "permission": "create customers" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.customers.edit", "permission": "edit customers" },
+      { "name": "Delete", "action_type": "delete", "route_name": "admin.customers.destroy", "permission": "delete customers" },
+      { "name": "Block", "action_type": "block", "route_name": "admin.customers.toggle-block", "permission": "block customers" }
     ]
   },
   {
     "slug": "suppliers",
-    "parent_slug": null,
+    "parent_slug": "people",
     "title": "Suppliers",
     "section": "People",
     "route_name": "admin.suppliers.index",
     "icon": "bi-truck",
     "view_permission": "view suppliers",
-    "sort_order": 55,
+    "sort_order": 53,
     "is_active": true,
     "actions": [
       { "name": "View", "action_type": "view", "route_name": "admin.suppliers.index", "permission": "view suppliers" },
@@ -364,6 +450,119 @@
     ]
   },
   {
+    "slug": "delivery_agents",
+    "parent_slug": "people",
+    "title": "Delivery Agents",
+    "section": "People",
+    "route_name": "admin.delivery-agents.index",
+    "icon": "bi-person-gear",
+    "view_permission": "view delivery agents",
+    "sort_order": 54,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.delivery-agents.index", "permission": "view delivery agents" },
+      { "name": "Create", "action_type": "create", "route_name": "admin.delivery-agents.create", "permission": "create delivery agents" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.delivery-agents.edit", "permission": "edit delivery agents" },
+      { "name": "Delete", "action_type": "delete", "route_name": "admin.delivery-agents.destroy", "permission": "delete delivery agents" }
+    ]
+  },
+  {
+    "slug": "manage_order",
+    "parent_slug": null,
+    "title": "Manage Order",
+    "section": "Manage Order",
+    "route_name": null,
+    "icon": "bi-box-seam",
+    "view_permission": null,
+    "sort_order": 60,
+    "is_active": true,
+    "actions": []
+  },
+  {
+    "slug": "orders",
+    "parent_slug": "manage_order",
+    "title": "Orders",
+    "section": "Manage Order",
+    "route_name": "admin.orders.index",
+    "icon": "bi-cart",
+    "view_permission": "view orders",
+    "sort_order": 61,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.orders.index", "permission": "view orders" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.orders.status", "permission": "edit orders" },
+      { "name": "Delete", "action_type": "delete", "route_name": "admin.orders.index", "permission": "delete orders" }
+    ]
+  },
+  {
+    "slug": "deliveries",
+    "parent_slug": "manage_order",
+    "title": "Deliveries",
+    "section": "Manage Order",
+    "route_name": "admin.deliveries.index",
+    "icon": "bi-truck",
+    "view_permission": "view deliveries",
+    "sort_order": 62,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.deliveries.index", "permission": "view deliveries" },
+      { "name": "Create", "action_type": "create", "route_name": "admin.deliveries.create", "permission": "create deliveries" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.deliveries.edit", "permission": "edit deliveries" },
+      { "name": "Delete", "action_type": "delete", "route_name": "admin.deliveries.destroy", "permission": "delete deliveries" }
+    ]
+  },
+  {
+    "slug": "shipping_methods",
+    "parent_slug": "manage_order",
+    "title": "Shipping Methods",
+    "section": "Manage Order",
+    "route_name": "admin.shipping-methods.index",
+    "icon": "bi-signpost-split",
+    "view_permission": "view shipping methods",
+    "sort_order": 63,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.shipping-methods.index", "permission": "view shipping methods" },
+      { "name": "Create", "action_type": "create", "route_name": "admin.shipping-methods.create", "permission": "create shipping methods" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.shipping-methods.edit", "permission": "edit shipping methods" },
+      { "name": "Delete", "action_type": "delete", "route_name": "admin.shipping-methods.destroy", "permission": "delete shipping methods" }
+    ]
+  },
+  {
+    "slug": "website_menus",
+    "parent_slug": null,
+    "title": "Website Menus",
+    "section": "Website Setup",
+    "route_name": "admin.storefront-menus.index",
+    "icon": "bi-menu-button-wide",
+    "view_permission": "view website settings",
+    "sort_order": 71,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.storefront-menus.index", "permission": "view website settings" },
+      { "name": "Create", "action_type": "create", "route_name": "admin.storefront-menus.store", "permission": "edit website settings" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.storefront-menus.update", "permission": "edit website settings" },
+      { "name": "Delete", "action_type": "delete", "route_name": "admin.storefront-menus.destroy", "permission": "edit website settings" }
+    ]
+  },
+  {
+    "slug": "website_products",
+    "parent_slug": null,
+    "title": "Website Products",
+    "section": "Website Setup",
+    "route_name": "admin.website-products.index",
+    "icon": "bi-grid-3x3-gap-fill",
+    "view_permission": "view website settings",
+    "sort_order": 72,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.website-products.index", "permission": "view website settings" },
+      { "name": "Create", "action_type": "create", "route_name": "admin.website-products.store", "permission": "edit website settings" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.website-products.update", "permission": "edit website settings" },
+      { "name": "Delete", "action_type": "delete", "route_name": "admin.website-products.destroy", "permission": "edit website settings" }
+    ]
+  },
+  {
     "slug": "settings",
     "parent_slug": null,
     "title": "Settings",
@@ -371,7 +570,7 @@
     "route_name": null,
     "icon": "bi-gear-wide-connected",
     "view_permission": null,
-    "sort_order": 60,
+    "sort_order": 80,
     "is_active": true,
     "actions": []
   },
@@ -383,7 +582,7 @@
     "route_name": "admin.users.index",
     "icon": "bi-people-fill",
     "view_permission": "view users",
-    "sort_order": 61,
+    "sort_order": 81,
     "is_active": true,
     "actions": [
       { "name": "View", "action_type": "view", "route_name": "admin.users.index", "permission": "view users" },
@@ -401,7 +600,7 @@
     "route_name": "admin.roles.index",
     "icon": "bi-shield-lock-fill",
     "view_permission": "view roles",
-    "sort_order": 62,
+    "sort_order": 82,
     "is_active": true,
     "actions": [
       { "name": "View", "action_type": "view", "route_name": "admin.roles.index", "permission": "view roles" },
@@ -419,12 +618,28 @@
     "route_name": "admin.menus.index",
     "icon": "bi-sliders",
     "view_permission": "view menus|view settings",
-    "sort_order": 63,
+    "sort_order": 83,
     "is_active": true,
     "actions": [
       { "name": "View", "action_type": "view", "route_name": "admin.menus.index", "permission": "view menus|view settings" },
-      { "name": "Edit", "action_type": "edit", "route_name": "admin.menus.edit", "permission": "edit menus|edit settings" }
+      { "name": "Add Menu", "action_type": "create", "route_name": "admin.menus.create", "permission": "create menus|edit menus|edit settings" },
+      { "name": "Edit", "action_type": "edit", "route_name": "admin.menus.edit", "permission": "edit menus|edit settings" },
+      { "name": "Delete", "action_type": "delete", "route_name": "admin.menus.destroy", "permission": "delete menus|edit settings" }
+    ]
+  },
+  {
+    "slug": "user_history",
+    "parent_slug": "settings",
+    "title": "User History",
+    "section": "System Access",
+    "route_name": "admin.user-history.index",
+    "icon": "bi-clock-history",
+    "view_permission": "view user history|view users|view settings",
+    "sort_order": 84,
+    "is_active": true,
+    "actions": [
+      { "name": "View", "action_type": "view", "route_name": "admin.user-history.index", "permission": "view user history|view users|view settings" },
+      { "name": "Clear", "action_type": "delete", "route_name": "admin.user-history.clear", "permission": "delete activity logs|manage settings|manage users" }
     ]
   }
 ]
-

@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AdminMenu;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
@@ -27,10 +28,6 @@ beforeEach(function () {
         'create brands',
         'edit brands',
         'delete brands',
-        'view makes',
-        'create makes',
-        'edit makes',
-        'delete makes',
         'view warehouses',
         'create warehouses',
         'edit warehouses',
@@ -51,6 +48,16 @@ beforeEach(function () {
         'edit suppliers',
         'delete suppliers',
         'manage suppliers',
+        'view delivery agents',
+        'create delivery agents',
+        'edit delivery agents',
+        'delete delivery agents',
+        'view quotes',
+        'create quotes',
+        'edit quotes',
+        'view pricing',
+        'view fulfillment',
+        'manage fulfillment',
         'view users',
         'edit users',
         'approve users',
@@ -88,16 +95,27 @@ it('grants admin and superadmin access to all menus and actions', function () {
     $this->actingAs($admin, 'backend')->get(route('admin.dashboard'))->assertStatus(200);
     $this->actingAs($admin, 'backend')->get(route('admin.products.index'))->assertStatus(200);
     $this->actingAs($admin, 'backend')->get(route('admin.orders.index'))->assertStatus(200);
+    $this->actingAs($admin, 'backend')->get(route('admin.quotes.index'))->assertStatus(200);
+    $this->actingAs($admin, 'backend')->get(route('admin.pricing.index'))->assertStatus(200);
+    $this->actingAs($admin, 'backend')->get(route('admin.fulfillment.index'))->assertStatus(200);
     $this->actingAs($admin, 'backend')->get(route('admin.customers.index'))->assertStatus(200);
     $this->actingAs($admin, 'backend')->get(route('admin.suppliers.index'))->assertStatus(200);
+    $this->actingAs($admin, 'backend')->get(route('admin.delivery-agents.index'))->assertStatus(200);
     $this->actingAs($admin, 'backend')->get(route('admin.users.index'))->assertStatus(200);
 
     // Sidebar shows all menus for admin
     $dashboardResponse = $this->actingAs($admin, 'backend')->get(route('admin.dashboard'));
-    $dashboardResponse->assertSee('All Products');
+    $dashboardResponse->assertSee('Products');
     $dashboardResponse->assertSee('Orders');
-    $dashboardResponse->assertSee('Customers (Simple/VIP)');
+    $dashboardResponse->assertSee('Quotes & RFQ');
+    $dashboardResponse->assertSee('Dynamic Pricing');
+    $dashboardResponse->assertSee('Order Fulfillment');
+    $dashboardResponse->assertSee('Deliveries');
+    $dashboardResponse->assertSee('Shipping Methods');
+    $dashboardResponse->assertSee('Payment Methods');
+    $dashboardResponse->assertSee('Customers');
     $dashboardResponse->assertSee('Suppliers');
+    $dashboardResponse->assertSee('Delivery Agents');
     $dashboardResponse->assertSee('Users');
 });
 
@@ -112,6 +130,15 @@ it('protects menu actions via middleware when user does not have permission', fu
 
     // Forbidden: Orders (403)
     $this->actingAs($staff, 'backend')->get(route('admin.orders.index'))->assertStatus(403);
+
+    // Forbidden: Deliveries (403)
+    $this->actingAs($staff, 'backend')->get(route('admin.deliveries.index'))->assertStatus(403);
+
+    // Forbidden: Shipping Methods (403)
+    $this->actingAs($staff, 'backend')->get(route('admin.shipping-methods.index'))->assertStatus(403);
+
+    // Forbidden: Payment Methods (403)
+    $this->actingAs($staff, 'backend')->get(route('admin.payment-methods.index'))->assertStatus(403);
 
     // Forbidden: Customers (403)
     $this->actingAs($staff, 'backend')->get(route('admin.customers.index'))->assertStatus(403);
@@ -129,11 +156,11 @@ it('hides forbidden menus from the sidebar for restricted users', function () {
     $response->assertStatus(200);
 
     // Should see products
-    $response->assertSee('All Products');
+    $response->assertSee('Products');
 
     // Should NOT see Orders, Customers, Suppliers, Users, Roles, Menus
     $response->assertDontSee('Sales & Fulfillment');
-    $response->assertDontSee('Customers (Simple/VIP)');
+    $response->assertDontSee('Customers');
     $response->assertDontSee('Suppliers');
     $response->assertDontSee('Menu Setup');
     $response->assertDontSee('System Roles');
@@ -421,4 +448,55 @@ it('protects stock and serial number management with dedicated stock permissions
     $user->givePermissionTo(Permission::findByName('view stock', 'backend'));
     $this->actingAs($user, 'backend')->get(route('admin.stock.index'))->assertStatus(200);
     $this->actingAs($user, 'backend')->get(route('admin.serial-numbers.index'))->assertStatus(200);
+});
+
+it('groups deliveries, staff, quotes, fulfillment, payment, shipping, and user history into dedicated sections', function () {
+    $allPerms = [
+        'create deliveries', 'edit deliveries', 'delete deliveries', 'view deliveries',
+        'create delivery agents', 'edit delivery agents', 'delete delivery agents', 'view delivery agents',
+        'create payment methods', 'edit payment methods', 'delete payment methods', 'view payment methods',
+        'create shipping methods', 'edit shipping methods', 'delete shipping methods', 'view shipping methods',
+        'create quotes', 'edit quotes', 'view quotes',
+        'view fulfillment', 'manage fulfillment',
+        'view pricing',
+        'view reports', 'export reports',
+        'create staff', 'edit staff', 'delete staff', 'view staff',
+        'view attendance', 'manage attendance',
+        'view salaries', 'manage salaries',
+        'view user history', 'delete activity logs',
+    ];
+
+    foreach ($allPerms as $p) {
+        Permission::firstOrCreate(['name' => $p, 'guard_name' => 'backend']);
+    }
+
+    $permissions = Permission::where('guard_name', 'backend')->get();
+    $grouped = AdminMenu::groupPermissionsDynamically($permissions);
+
+    expect($grouped)->toHaveKeys([
+        'Deliveries',
+        'Delivery Agents',
+        'Payment Methods',
+        'Shipping Methods',
+        'Quotes & RFQ',
+        'Order Fulfillment',
+        'Manage Staff',
+        'User History',
+        'Analytics & Reports',
+    ]);
+
+    // Check specific permissions are placed in the right sections
+    expect($grouped['Deliveries']->pluck('name')->toArray())->toContain('create deliveries', 'delete deliveries')
+        ->and($grouped['Delivery Agents']->pluck('name')->toArray())->toContain('create delivery agents', 'delete delivery agents')
+        ->and($grouped['Payment Methods']->pluck('name')->toArray())->toContain('create payment methods', 'delete payment methods')
+        ->and($grouped['Shipping Methods']->pluck('name')->toArray())->toContain('create shipping methods', 'delete shipping methods')
+        ->and($grouped['Quotes & RFQ']->pluck('name')->toArray())->toContain('create quotes', 'edit quotes')
+        ->and($grouped['Order Fulfillment']->pluck('name')->toArray())->toContain('manage fulfillment', 'view fulfillment')
+        ->and($grouped['Manage Staff']->pluck('name')->toArray())->toContain('create staff', 'manage attendance', 'manage salaries')
+        ->and($grouped['User History']->pluck('name')->toArray())->toContain('delete activity logs');
+
+    // General & Custom should NOT contain these permissions
+    if (isset($grouped['General & Custom'])) {
+        expect($grouped['General & Custom']->pluck('name')->toArray())->not->toContain('create deliveries', 'create staff', 'create quotes');
+    }
 });

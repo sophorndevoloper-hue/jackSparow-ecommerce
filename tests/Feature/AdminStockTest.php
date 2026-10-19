@@ -1,7 +1,7 @@
 <?php
 
+use App\Models\Brand;
 use App\Models\Category;
-use App\Models\Make;
 use App\Models\Product;
 use App\Models\User;
 use Spatie\Permission\Models\Permission;
@@ -147,19 +147,19 @@ it('sorts stock overview products by updated_at descending', function () {
     $response->assertSee('Updated');
 });
 
-it('allows filtering stock overview by make in general, low stock alerts, and out of stock', function () {
+it('allows filtering stock overview by brand in general, low stock alerts, and out of stock', function () {
     $admin = User::factory()->create(['is_approved' => true]);
     $admin->assignRole(Role::findByName('admin', 'backend'));
 
     $category = Category::factory()->create();
-    $makeAsus = Make::factory()->create(['name' => 'ASUS ROG']);
-    $makeMsi = Make::factory()->create(['name' => 'MSI Gaming']);
+    $brandAsus = Brand::factory()->create(['name' => 'ASUS ROG']);
+    $brandMsi = Brand::factory()->create(['name' => 'MSI Gaming']);
 
     // ASUS products: 1 normal in stock, 1 low stock, 1 out of stock
     $asusInStock = Product::factory()->create([
         'name' => 'ASUS Strix In Stock',
         'category_id' => $category->id,
-        'make_id' => $makeAsus->id,
+        'brand_id' => $brandAsus->id,
         'stock_quantity' => 20,
         'low_stock_threshold' => 5,
     ]);
@@ -167,7 +167,7 @@ it('allows filtering stock overview by make in general, low stock alerts, and ou
     $asusLowStock = Product::factory()->create([
         'name' => 'ASUS TUF Low Stock',
         'category_id' => $category->id,
-        'make_id' => $makeAsus->id,
+        'brand_id' => $brandAsus->id,
         'stock_quantity' => 2,
         'low_stock_threshold' => 5,
     ]);
@@ -175,7 +175,7 @@ it('allows filtering stock overview by make in general, low stock alerts, and ou
     $asusOutOfStock = Product::factory()->create([
         'name' => 'ASUS Prime Out Of Stock',
         'category_id' => $category->id,
-        'make_id' => $makeAsus->id,
+        'brand_id' => $brandAsus->id,
         'stock_quantity' => 0,
         'low_stock_threshold' => 5,
     ]);
@@ -184,7 +184,7 @@ it('allows filtering stock overview by make in general, low stock alerts, and ou
     $msiLowStock = Product::factory()->create([
         'name' => 'MSI Ventus Low Stock',
         'category_id' => $category->id,
-        'make_id' => $makeMsi->id,
+        'brand_id' => $brandMsi->id,
         'stock_quantity' => 1,
         'low_stock_threshold' => 5,
     ]);
@@ -192,13 +192,13 @@ it('allows filtering stock overview by make in general, low stock alerts, and ou
     $msiOutOfStock = Product::factory()->create([
         'name' => 'MSI Suprim Out Of Stock',
         'category_id' => $category->id,
-        'make_id' => $makeMsi->id,
+        'brand_id' => $brandMsi->id,
         'stock_quantity' => 0,
         'low_stock_threshold' => 5,
     ]);
 
-    // 1. Filter by Make ASUS ROG in general stock overview
-    $respOverview = $this->actingAs($admin, 'backend')->get(route('admin.stock.index', ['make_id' => $makeAsus->id]));
+    // 1. Filter by Brand ASUS ROG in general stock overview
+    $respOverview = $this->actingAs($admin, 'backend')->get(route('admin.stock.index', ['brand_id' => $brandAsus->id]));
     $respOverview->assertStatus(200);
     $respOverview->assertSee('ASUS Strix In Stock');
     $respOverview->assertSee('ASUS TUF Low Stock');
@@ -206,15 +206,15 @@ it('allows filtering stock overview by make in general, low stock alerts, and ou
     $respOverview->assertDontSee('MSI Ventus Low Stock');
     $respOverview->assertDontSee('MSI Suprim Out Of Stock');
 
-    // 2. Filter by Make ASUS ROG with Low Stock alert
-    $respLow = $this->actingAs($admin, 'backend')->get(route('admin.stock.index', ['filter' => 'low', 'make_id' => $makeAsus->id]));
+    // 2. Filter by Brand ASUS ROG with Low Stock alert
+    $respLow = $this->actingAs($admin, 'backend')->get(route('admin.stock.index', ['filter' => 'low', 'brand_id' => $brandAsus->id]));
     $respLow->assertStatus(200);
     $respLow->assertSee('ASUS TUF Low Stock');
     $respLow->assertDontSee('ASUS Strix In Stock');
     $respLow->assertDontSee('MSI Ventus Low Stock');
 
-    // 3. Filter by Make ASUS ROG with Out of Stock
-    $respOut = $this->actingAs($admin, 'backend')->get(route('admin.stock.index', ['filter' => 'out', 'make_id' => $makeAsus->id]));
+    // 3. Filter by Brand ASUS ROG with Out of Stock
+    $respOut = $this->actingAs($admin, 'backend')->get(route('admin.stock.index', ['filter' => 'out', 'brand_id' => $brandAsus->id]));
     $respOut->assertStatus(200);
     $respOut->assertSee('ASUS Prime Out Of Stock');
     $respOut->assertDontSee('ASUS Strix In Stock');

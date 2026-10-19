@@ -1,85 +1,53 @@
 <?php
 
-use App\Models\User;
+use App\Models\FrontendUser;
 
-test('profile page is displayed', function () {
-    $user = User::factory()->create();
+test('customer profile page is displayed', function () {
+    $customer = FrontendUser::factory()->create();
 
     $response = $this
-        ->actingAs($user)
+        ->actingAs($customer, 'frontend')
+        ->get(route('customer.profile'));
+
+    $response->assertOk()
+        ->assertSee($customer->name)
+        ->assertSee($customer->email);
+});
+
+test('customer profile information can be updated using frontend profile request', function () {
+    $customer = FrontendUser::factory()->create();
+
+    $response = $this
+        ->actingAs($customer, 'frontend')
+        ->put(route('customer.profile.update'), [
+            'name' => 'Updated Customer',
+            'email' => 'updated_customer@example.com',
+            'phone' => '+1 555-0199',
+            'company_name' => 'Tech Corp',
+            'address' => '123 Tech Blvd',
+            'city' => 'Phnom Penh',
+            'state' => 'Central',
+            'postal_code' => '12000',
+            'country' => 'Cambodia',
+        ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect();
+
+    $customer->refresh();
+
+    expect($customer->name)->toBe('Updated Customer')
+        ->and($customer->email)->toBe('updated_customer@example.com')
+        ->and($customer->company_name)->toBe('Tech Corp');
+});
+
+test('unified profile url redirects customer to customer profile', function () {
+    $customer = FrontendUser::factory()->create();
+
+    $response = $this
+        ->actingAs($customer, 'frontend')
         ->get('/profile');
 
-    $response->assertOk();
-});
-
-test('profile information can be updated', function () {
-    $user = User::factory()->create();
-
-    $response = $this
-        ->actingAs($user)
-        ->patch('/profile', [
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
-
-    $response
-        ->assertSessionHasNoErrors()
-        ->assertRedirect('/profile');
-
-    $user->refresh();
-
-    $this->assertSame('Test User', $user->name);
-    $this->assertSame('test@example.com', $user->email);
-    $this->assertNull($user->email_verified_at);
-});
-
-test('email verification status is unchanged when the email address is unchanged', function () {
-    $user = User::factory()->create();
-
-    $response = $this
-        ->actingAs($user)
-        ->patch('/profile', [
-            'name' => 'Test User',
-            'email' => $user->email,
-        ]);
-
-    $response
-        ->assertSessionHasNoErrors()
-        ->assertRedirect('/profile');
-
-    $this->assertNotNull($user->refresh()->email_verified_at);
-});
-
-test('user can delete their account', function () {
-    $user = User::factory()->create();
-
-    $response = $this
-        ->actingAs($user)
-        ->delete('/profile', [
-            'password' => 'password',
-        ]);
-
-    $response
-        ->assertSessionHasNoErrors()
-        ->assertRedirect('/');
-
-    $this->assertGuest();
-    $this->assertNull($user->fresh());
-});
-
-test('correct password must be provided to delete account', function () {
-    $user = User::factory()->create();
-
-    $response = $this
-        ->actingAs($user)
-        ->from('/profile')
-        ->delete('/profile', [
-            'password' => 'wrong-password',
-        ]);
-
-    $response
-        ->assertSessionHasErrorsIn('userDeletion', 'password')
-        ->assertRedirect('/profile');
-
-    $this->assertNotNull($user->fresh());
+    $response->assertRedirect(route('customer.profile'));
 });

@@ -7,15 +7,12 @@
     <div class="w-full max-w-md">
         <!-- Brand Header Card -->
         <div class="text-center mb-8">
-            <a href="{{ route('home') }}" class="inline-flex flex-col items-center gap-2 group">
-                <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-500/30 group-hover:scale-105 transition transform">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
-                </div>
-                <div class="flex items-center gap-1.5 text-2xl font-black text-gray-900 tracking-tight">
-                    JackSparow <span class="text-blue-600">TECH</span>
-                </div>
+            <a href="{{ route('home') }}" class="inline-flex items-center justify-center group mb-3" aria-label="JackSparrow B2B Computer Parts">
+                <img src="{{ asset('assets/images/brand/logo/jacksparrow-logo.png') }}" 
+                     alt="JackSparrow - B2B Computer Parts" 
+                     class="h-12 sm:h-14 w-auto object-contain transition duration-200 group-hover:scale-105">
             </a>
-            <h1 class="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight mt-3">Storefront Sign In</h1>
+            <h1 class="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">Storefront Sign In</h1>
             <p class="text-xs sm:text-sm text-gray-500 mt-1.5">
                 Access your orders, track shipments, and unlock VIP hardware discounts.
             </p>
@@ -23,10 +20,15 @@
 
         <!-- Form Card -->
         <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-gray-100 p-6 sm:p-10">
-            @if(session('success'))
-                <div class="mb-5 rounded-2xl bg-emerald-50 border border-emerald-200 p-4 text-xs font-semibold text-emerald-800 flex items-center gap-2">
-                    <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                    <span>{{ session('success') }}</span>
+            @if((session()->has('url.intended') && str_contains((string) session()->get('url.intended'), 'checkout')) || request()->has('from_checkout'))
+                <div class="mb-5 rounded-2xl bg-blue-50 border border-blue-200/80 p-4 text-xs font-medium text-blue-900 flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 mt-0.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                    </div>
+                    <div>
+                        <div class="font-bold text-blue-950">Customer Sign In Required for Checkout</div>
+                        <div class="text-[11px] text-blue-800 mt-0.5">Please sign in with your customer account to complete your order. Your shopping cart items are saved and ready for checkout.</div>
+                    </div>
                 </div>
             @endif
 

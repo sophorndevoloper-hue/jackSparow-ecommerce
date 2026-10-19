@@ -9,6 +9,7 @@ use App\Models\SerialNumber;
 use App\Models\Warehouse;
 use App\Services\SerialImportService;
 use App\Services\SerialTrackingService;
+use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -49,8 +50,8 @@ class SerialNumberController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('serial_number', 'like', "%{$search}%")
                     ->orWhereHas('product', function ($pq) use ($search) {
-                        $pq->where('name', 'ilike', "%{$search}%")
-                            ->orWhere('sku', 'ilike', "%{$search}%");
+                        $pq->where('name', 'like', "%{$search}%")
+                            ->orWhere('sku', 'like', "%{$search}%");
                     });
             });
         }
@@ -278,5 +279,73 @@ class SerialNumberController extends Controller
                 'message' => $e->getMessage(),
             ], 422);
         }
+    }
+
+    /**
+     * Display printable warranty certificate for an individual serial number.
+     */
+    public function warranty(SerialNumber $serialNumber): View
+    {
+        $serialNumber->load(['product.category', 'product.brand', 'warehouse', 'supplier', 'order.user']);
+
+        return view('backend.serial-numbers.warranty-print', [
+            'serialNumbers' => collect([$serialNumber]),
+            'isBatch' => false,
+            'title' => 'Warranty Certificate - '.$serialNumber->serial_number,
+        ]);
+    }
+
+    /**
+     * Display printable warranty certificates for a batch of serial numbers or filtered query.
+     */
+    public function printWarranties(Request $request): View|RedirectResponse
+    {
+        $query = SerialNumber::with(['product.category', 'product.brand', 'warehouse', 'supplier', 'order.user']);
+
+        if ($request->filled('ids')) {
+            $ids = is_array($request->input('ids'))
+                ? $request->input('ids')
+                : explode(',', (string) $request->input('ids'));
+            $ids = array_filter(array_map('intval', $ids));
+            if (! empty($ids)) {
+                $query->whereIn('id', $ids);
+            }
+        } else {
+            if ($request->filled('order_id')) {
+                $query->where('order_id', $request->input('order_id'));
+            }
+            if ($request->filled('status')) {
+                $query->where('status', $request->input('status'));
+            }
+            if ($request->filled('warehouse_id')) {
+                $query->where('warehouse_id', $request->input('warehouse_id'));
+            }
+            if ($request->filled('product_id')) {
+                $query->where('product_id', $request->input('product_id'));
+            }
+            if ($request->filled('search')) {
+                $search = strtoupper(trim((string) $request->input('search')));
+                $query->where(function ($q) use ($search) {
+                    $q->where('serial_number', 'like', "%{$search}%")
+                        ->orWhereHas('product', function ($pq) use ($search) {
+                            $pq->where('name', 'like', "%{$search}%")
+                                ->orWhere('sku', 'like', "%{$search}%");
+                        });
+                });
+            }
+        }
+
+        $serialNumbers = $query->latest('updated_at')->take(100)->get();
+
+        if ($serialNumbers->isEmpty()) {
+            return redirect()->route('admin.serial-numbers.index')
+                ->with('error', 'No serial numbers found matching your selection for warranty certificate printing.');
+        }
+
+        return view('backend.serial-numbers.warranty-print', [
+            'serialNumbers' => $serialNumbers,
+            'isBatch' => true,
+            'title' => 'Batch Hardware Warranty Certificates ('.$serialNumbers->count().' Units)',
+        ]);
     }
 }

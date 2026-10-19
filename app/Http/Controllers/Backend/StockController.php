@@ -6,7 +6,6 @@ use App\DataTables\StockDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Category;
-use App\Models\Make;
 use App\Models\Product;
 use App\Models\Warehouse;
 use Illuminate\Contracts\View\View;
@@ -20,7 +19,7 @@ class StockController extends Controller
      */
     public function index(Request $request, StockDataTable $dataTable): View
     {
-        $query = Product::query()->with(['category', 'brand', 'make', 'primaryImage', 'warehouses']);
+        $query = Product::query()->with(['category', 'brand', 'primaryImage', 'warehouses']);
 
         $filter = $request->input('filter', 'all');
         $warehouseId = $request->input('warehouse_id');
@@ -47,10 +46,6 @@ class StockController extends Controller
             $query->where('brand_id', $request->input('brand_id'));
         }
 
-        if ($request->filled('make_id')) {
-            $query->where('make_id', $request->input('make_id'));
-        }
-
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
@@ -70,14 +65,12 @@ class StockController extends Controller
 
         $categories = Category::orderBy('name')->get();
         $brands = Brand::orderBy('name')->get();
-        $makes = Make::active()->orderBy('name')->get();
         $warehouses = Warehouse::active()->orderBy('name')->get();
 
         return view('backend.stock.index', compact(
             'products',
             'categories',
             'brands',
-            'makes',
             'warehouses',
             'warehouseId',
             'totalUnits',
@@ -101,6 +94,21 @@ class StockController extends Controller
             'warehouse_id' => ['nullable', 'exists:warehouses,id'],
         ]);
 
+        $hasSerials = $product->serialNumbers()->exists();
+        if ($product->requires_serial_tracking || $hasSerials) {
+            $newQty = $request->integer('stock_quantity');
+            if ($newQty !== $product->stock_quantity) {
+                return back()->with('error', "Stock quantity for serialized product '{$product->name}' is determined by active serial numbers. Please use Serial Numbers management or Stock Adjustments with serial numbers.");
+            }
+
+            $product->update([
+                'low_stock_threshold' => $request->integer('low_stock_threshold'),
+            ]);
+            $product->syncTotalStock();
+
+            return back()->with('success', "Alert threshold updated for serialized product '{$product->name}'.");
+        }
+
         $newQty = $request->integer('stock_quantity');
         $product->update([
             'stock_quantity' => $newQty,
@@ -116,6 +124,8 @@ class StockController extends Controller
             $defaultWarehouse = Warehouse::where('is_default', true)->first() ?? Warehouse::first();
             $defaultWarehouse?->setProductStock($product, $newQty);
         }
+
+        $product->syncTotalStock();
 
         return back()->with('success', "Stock updated for '{$product->name}' (New Quantity: {$product->stock_quantity}).");
     }

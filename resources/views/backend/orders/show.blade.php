@@ -9,7 +9,18 @@
                     <p class="text-muted mb-0">Placed on {{ $order->created_at->format('F d, Y \a\t h:i A') }}</p>
                 </div>
             </div>
-            <div class="heading-actions">
+            <div class="heading-actions d-flex gap-2">
+                @php
+                    $orderSerialsCount = \App\Models\SerialNumber::where('order_id', $order->id)->count();
+                @endphp
+                @if($orderSerialsCount > 0)
+                    <a href="{{ route('admin.serial-numbers.warranties.print', ['order_id' => $order->id]) }}" target="_blank" class="btn btn-outline-info btn-sm d-inline-flex align-items-center gap-1 shadow-xs">
+                        <i class="bi bi-printer"></i> Print Warranties ({{ $orderSerialsCount }})
+                    </a>
+                @endif
+                <a href="{{ route('admin.fulfillment.show', $order->id) }}" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1 shadow-xs">
+                    <i class="bi bi-upc-scan"></i> Fulfillment Station
+                </a>
                 <a href="{{ route('admin.orders.index') }}" class="btn btn-outline-secondary btn-sm">
                     &larr; Back to Orders
                 </a>
@@ -176,6 +187,61 @@
                             <span class="badge bg-light text-dark border text-uppercase">{{ str_replace('_', ' ', $order->payment_method) }}</span>
                         </div>
                     </div>
+                </div>
+
+                <!-- Deliveries & Fulfillment Panel -->
+                <div class="panel p-4 mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0"><i class="bi bi-truck me-1"></i> Deliveries</h5>
+                        @can('create deliveries')
+                            <a href="{{ route('admin.deliveries.create', ['order_id' => $order->id]) }}" class="btn btn-outline-primary btn-sm py-0 px-2" style="font-size: 12px;">
+                                <i class="bi bi-plus-circle me-1"></i> Dispatch
+                            </a>
+                        @endcan
+                    </div>
+
+                    @if($order->deliveries->isNotEmpty())
+                        <div class="space-y-3">
+                            @foreach($order->deliveries as $del)
+                                <div class="p-3 bg-light-subtle rounded border">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <a href="{{ route('admin.deliveries.show', $del->id) }}" class="fw-bold text-primary font-monospace small text-decoration-none">
+                                            {{ $del->delivery_number }}
+                                        </a>
+                                        <span class="badge {{ $del->statusBadgeClass() }} py-1 px-2" style="font-size: 11px;">
+                                            <i class="bi {{ $del->statusIcon() }} me-1"></i>{{ $del->statusLabel() }}
+                                        </span>
+                                    </div>
+                                    <div class="small text-muted mb-1">
+                                        <span class="text-dark fw-semibold">{{ $del->carrier ?: 'Carrier' }}</span>
+                                        @if($del->tracking_number)
+                                            &bull; <span class="font-monospace text-primary">{{ $del->tracking_number }}</span>
+                                        @endif
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
+                                        <small class="text-muted" style="font-size: 11px;">
+                                            Est: {{ $del->estimated_delivery_date ? $del->estimated_delivery_date->format('M d, Y') : 'Pending' }}
+                                        </small>
+                                        <a href="{{ route('admin.deliveries.show', $del->id) }}" class="btn btn-xs btn-outline-secondary py-0 px-2" style="font-size: 11px;">
+                                            Track Shipment &rarr;
+                                        </a>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="text-center py-3 text-muted small">
+                            <i class="bi bi-box-seam d-block fs-4 text-muted mb-1"></i>
+                            No shipment dispatched yet for this order.
+                            @can('create deliveries')
+                                <div class="mt-2">
+                                    <a href="{{ route('admin.deliveries.create', ['order_id' => $order->id]) }}" class="btn btn-primary btn-sm">
+                                        <i class="bi bi-send-fill me-1"></i> Dispatch Shipment Now
+                                    </a>
+                                </div>
+                            @endcan
+                        </div>
+                    @endif
                 </div>
 
                 <!-- Shipping Address Panel -->

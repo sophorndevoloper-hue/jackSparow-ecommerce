@@ -2,6 +2,7 @@
 
 namespace App\DataTables;
 
+use App\DataTables\Concerns\HasStandardActions;
 use App\Models\Brand;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Yajra\DataTables\EloquentDataTable;
@@ -11,6 +12,8 @@ use Yajra\DataTables\Services\DataTable;
 
 class BrandDataTable extends DataTable
 {
+    use HasStandardActions;
+
     /**
      * Build the DataTable class.
      *
@@ -45,27 +48,11 @@ class BrandDataTable extends DataTable
             })
             ->editColumn('products_count', fn (Brand $b) => '<span class="badge bg-primary-subtle text-primary border border-primary-subtle">'.(int) $b->products_count.' Products</span>')
             ->editColumn('is_active', fn (Brand $b) => $b->is_active ? '<span class="badge bg-success-subtle text-success border border-success-subtle">Active</span>' : '<span class="badge bg-secondary">Inactive</span>')
-            ->addColumn('action', function (Brand $b) {
-                $editUrl = route('admin.brands.edit', $b->id);
-                $deleteUrl = route('admin.brands.destroy', $b->id);
-                $csrf = csrf_field();
-                $method = method_field('DELETE');
-
-                return '
-                    <div class="btn-group btn-group-sm">
-                        <a href="'.$editUrl.'" class="btn btn-outline-secondary" title="Edit Brand">
-                            <i class="bi bi-pencil"></i>
-                        </a>
-                        <form action="'.$deleteUrl.'" method="POST" class="d-inline" onsubmit="return confirm(\'Delete this brand?\');">
-                            '.$csrf.'
-                            '.$method.'
-                            <button type="submit" class="btn btn-outline-danger" title="Delete Brand">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </form>
-                    </div>
-                ';
-            })
+            ->addColumn('action', fn (Brand $b) => $this->renderActionButtons(
+                route('admin.brands.edit', $b->id),
+                route('admin.brands.destroy', $b->id),
+                'brand'
+            ))
             ->editColumn('updated_at', fn (Brand $b) => $b->updated_at?->format('Y-m-d H:i') ?? '-')
             ->rawColumns(['name', 'website', 'products_count', 'is_active', 'action'])
             ->setRowId('id');

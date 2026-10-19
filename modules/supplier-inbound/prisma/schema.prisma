@@ -1,0 +1,164 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum PaymentTerms {
+  PREPAID
+  NET_15
+  NET_30
+  NET_60
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  ORDERED
+  PARTIALLY_RECEIVED
+  RECEIVED
+  CANCELLED
+}
+
+enum SerialStatus {
+  AVAILABLE
+  RESERVED
+  SOLD
+  RMA_PENDING
+  DEFECTIVE
+}
+
+enum SupplierRmaStatus {
+  PENDING
+  SHIPPED_TO_VENDOR
+  RESOLVED_REPLACEMENT
+  RESOLVED_CREDIT
+  REJECTED
+}
+
+model Supplier {
+  id           String       @id @default(uuid())
+  companyName  String       @map("company_name")
+  contactName  String?      @map("contact_name")
+  email        String
+  phone        String?
+  taxId        String?      @map("tax_id")
+  paymentTerms PaymentTerms @default(NET_30) @map("payment_terms")
+  currency     String       @default("USD")
+  address      String?
+  notes        String?      @db.Text
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  purchaseOrders    PurchaseOrder[]
+  supplierRmaClaims SupplierRmaClaim[]
+
+  @@index([companyName])
+  @@index([paymentTerms])
+  @@map("suppliers")
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  sku         String   @unique
+  name        String
+  category    String
+  brand       String
+  basePrice   Decimal  @db.Decimal(12, 2) @map("base_price")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  orderItems PurchaseOrderItem[]
+  serials    ProductSerial[]
+
+  @@index([sku])
+  @@index([category, brand])
+  @@map("products")
+}
+
+model PurchaseOrder {
+  id                   String              @id @default(uuid())
+  poNumber             String              @unique @map("po_number")
+  supplierId           String              @map("supplier_id")
+  status               PurchaseOrderStatus @default(DRAFT)
+  totalAmount          Decimal             @default(0.00) @db.Decimal(12, 2) @map("total_amount")
+  shippingDutyCost     Decimal             @default(0.00) @db.Decimal(12, 2) @map("shipping_duty_cost")
+  orderDate            DateTime            @default(now()) @map("order_date")
+  expectedDeliveryDate DateTime?           @map("expected_delivery_date")
+  paymentDueDate       DateTime?           @map("payment_due_date")
+  isPaid               Boolean             @default(false) @map("is_paid")
+  createdAt            DateTime            @default(now()) @map("created_at")
+  updatedAt            DateTime            @updatedAt @map("updated_at")
+
+  supplier Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  items    PurchaseOrderItem[]
+
+  @@index([supplierId, status])
+  @@index([paymentDueDate, isPaid])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id          String   @id @default(uuid())
+  poId        String   @map("po_id")
+  productId   String   @map("product_id")
+  orderedQty  Int      @map("ordered_qty")
+  receivedQty Int      @default(0) @map("received_qty")
+  unitCost    Decimal  @db.Decimal(12, 2) @map("unit_cost")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  purchaseOrder PurchaseOrder   @relation(fields: [poId], references: [id], onDelete: Cascade)
+  product       Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
+  serials       ProductSerial[]
+
+  @@unique([poId, productId])
+  @@index([poId])
+  @@index([productId])
+  @@map("purchase_order_items")
+}
+
+model ProductSerial {
+  id             String       @id @default(uuid())
+  productId      String       @map("product_id")
+  serialNumber   String       @unique @map("serial_number")
+  poItemId       String?      @map("po_item_id")
+  status         SerialStatus @default(AVAILABLE)
+  costPrice      Decimal      @db.Decimal(12, 2) @map("cost_price") // True landed cost: unitCost + apportioned duty/freight
+  warrantyMonths Int          @default(36) @map("warranty_months")
+  receivedAt     DateTime     @default(now()) @map("received_at")
+
+  product           Product            @relation(fields: [productId], references: [id], onDelete: Restrict)
+  poItem            PurchaseOrderItem? @relation(fields: [poItemId], references: [id], onDelete: SetNull)
+  supplierRmaClaims SupplierRmaClaim[] @relation("DefectiveSerial")
+  replacementClaims SupplierRmaClaim[] @relation("ReplacementSerial")
+
+  @@index([status, productId])
+  @@index([poItemId])
+  @@index([serialNumber])
+  @@map("product_serials")
+}
+
+model SupplierRmaClaim {
+  id                  String            @id @default(uuid())
+  claimNumber         String            @unique @map("claim_number")
+  supplierId          String            @map("supplier_id")
+  serialId            String            @map("serial_id")
+  faultDescription    String            @map("fault_description") @db.Text
+  status              SupplierRmaStatus @default(PENDING)
+  vendorCreditAmount  Decimal?          @db.Decimal(12, 2) @map("vendor_credit_amount")
+  replacementSerialId String?           @map("replacement_serial_id")
+  createdAt           DateTime          @default(now()) @map("created_at")
+  closedAt            DateTime?         @map("closed_at")
+
+  supplier          Supplier       @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  defectiveSerial   ProductSerial  @relation("DefectiveSerial", fields: [serialId], references: [id], onDelete: Restrict)
+  replacementSerial ProductSerial? @relation("ReplacementSerial", fields: [replacementSerialId], references: [id], onDelete: SetNull)
+
+  @@index([supplierId, status])
+  @@index([serialId])
+  @@map("supplier_rma_claims")
+}
+

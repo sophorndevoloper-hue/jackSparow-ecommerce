@@ -27,7 +27,7 @@ class UpdateProductRequest extends FormRequest
         return [
             'category_id' => ['required', 'exists:categories,id'],
             'brand_id' => ['nullable', 'exists:brands,id'],
-            'make_id' => ['nullable', 'exists:makes,id'],
+            'model_id' => ['nullable', 'exists:product_models,id'],
             'name' => ['required', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:255', Rule::unique('products', 'slug')->ignore($productId)],
             'sku' => ['required', 'string', 'max:100', Rule::unique('products', 'sku')->ignore($productId)],

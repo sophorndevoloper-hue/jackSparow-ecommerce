@@ -314,10 +314,13 @@
                     </a>
                 @endcan
                 @can('view users')
-                    <a href="{{ route('admin.users.index') }}" class="btn btn-primary btn-sm">
+                    <a href="{{ route('admin.users.index') }}" class="btn btn-outline-secondary btn-sm">
                         <i class="bi bi-people me-1"></i> Admin Users
                     </a>
                 @endcan
+                <a href="{{ route('admin.menus.create') }}" class="btn btn-primary btn-sm shadow-sm">
+                    <i class="bi bi-plus-lg me-1"></i> Add Menu
+                </a>
             </div>
         </div>
 
@@ -417,41 +420,49 @@
             </div>
         </div>
 
-        <!-- Menu Section Accordions & Cards -->
-        <div class="space-y-4">
-            @foreach($groupedMenus as $sectionName => $sectionMenus)
-                @php
-                    $topLevelMenus = $sectionMenus->filter(fn ($m) => empty($m->parent_slug));
-                @endphp
-                <div class="panel mb-4 shadow-sm border">
-                    <div class="p-3 border-bottom bg-light-subtle d-flex align-items-center justify-content-between">
-                        <div class="d-flex align-items-center gap-2">
-                            <i class="bi bi-folder2 text-primary fs-5"></i>
-                            <h5 class="mb-0 fw-bold text-dark">{{ $sectionName }} Section</h5>
-                        </div>
-                        <span class="badge bg-secondary font-monospace">{{ $sectionMenus->count() }} {{ str('item')->plural($sectionMenus->count()) }}</span>
-                    </div>
+        <!-- Menu Navigation Hierarchy Panel -->
+        <div class="panel mb-4 shadow-sm border">
+            <div class="p-3 border-bottom bg-light-subtle d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-list-nested text-primary fs-5"></i>
+                    <h5 class="mb-0 fw-bold text-dark">Menus &amp; Navigation Hierarchy</h5>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-secondary font-monospace">{{ $menus->count() }} {{ str('item')->plural($menus->count()) }}</span>
+                    <a href="{{ route('admin.menus.create') }}" class="btn btn-sm btn-primary py-1 px-3 shadow-sm">
+                        <i class="bi bi-plus-lg me-1"></i> Add Menu
+                    </a>
+                </div>
+            </div>
 
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th style="width: 110px;"><i class="bi bi-arrow-down-up me-1"></i> Sort</th>
-                                    <th>Menu Title &amp; Route</th>
-                                    <th>View Permission</th>
-                                    <th>Actions</th>
-                                    <th>Status</th>
-                                    <th class="text-end" style="min-width: 190px;">Controls</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($topLevelMenus as $menu)
-                                    @php
-                                        $childMenus = $sectionMenus->filter(fn ($m) => $m->parent_slug === $menu->slug);
-                                        $hasChildren = $childMenus->isNotEmpty();
-                                        $isProtected = \App\Models\AdminMenu::isProtected($menu);
-                                        $isParentActive = $isProtected || ($menu->is_active_for_session ?? \App\Models\AdminMenu::isMenuActiveForSession($menu));
-                                    @endphp
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 110px;"><i class="bi bi-arrow-down-up me-1"></i> Sort</th>
+                            <th>Menu Title &amp; Route</th>
+                            <th>View Permission</th>
+                            <th>Actions</th>
+                            <th>Status</th>
+                            <th class="text-end" style="min-width: 190px;">Controls</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @php
+                            $topLevelMenus = $menus->filter(fn ($m) => empty($m->parent_slug))->unique('id')->sortBy('sort_order');
+                            $renderedMenuIds = [];
+                        @endphp
+                        @foreach($topLevelMenus as $menu)
+                            @php
+                                if (in_array($menu->id, $renderedMenuIds, true)) {
+                                    continue;
+                                }
+                                $childMenus = $menus->filter(fn ($m) => $m->parent_slug === $menu->slug)->unique('id')->sortBy('sort_order');
+                                $hasChildren = $childMenus->isNotEmpty();
+                                $isProtected = \App\Models\AdminMenu::isProtected($menu);
+                                $isParentActive = $isProtected || ($menu->is_active_for_session ?? \App\Models\AdminMenu::isMenuActiveForSession($menu));
+                                $renderedMenuIds[] = $menu->id;
+                            @endphp
 
                                     @if($hasChildren)
                                         <!-- Parent Group Header Row (Direct, No Dropdown) -->
@@ -537,16 +548,28 @@
                                                             </button>
                                                         @endif
                                                     </form>
-                                                @endif
-                                            </td>
+                                                        <form action="{{ route('admin.menus.destroy', $menu->id) }}" method="POST" class="d-inline ms-1" onsubmit="return confirm('Are you sure you want to delete menu \'{{ $menu->title }}\'?');">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2 font-monospace" style="font-size: 11.5px; height: 26px; line-height: 24px;" title="Delete menu">
+                                                                <i class="bi bi-trash"></i>
+                                                            </button>
+                                                        </form>
+                                                    @endif
+                                                </td>
                                         </tr>
 
                                         <!-- Direct Child Rows under Parent Group (Always Visible, No Dropdown/Collapse) -->
                                         @foreach($childMenus as $child)
                                             @php
+                                                if (in_array($child->id, $renderedMenuIds, true)) {
+                                                    continue;
+                                                }
+                                                $renderedMenuIds[] = $child->id;
                                                 $isChildProtected = \App\Models\AdminMenu::isProtected($child);
                                                 $isChildActive = $isChildProtected || ($isParentActive && ($child->is_active_for_session ?? \App\Models\AdminMenu::isMenuActiveForSession($child)));
                                             @endphp
+
                                             <tr class="child-menu-row {{ ! $isChildActive ? 'opacity-75 bg-light' : '' }}" id="child-row-{{ $child->id }}">
                                                 <td onclick="event.stopPropagation();" class="ps-3">
                                                     <form action="{{ route('admin.menus.sort', $child->id) }}" method="POST" class="sort-menu-form" data-menu-id="{{ $child->id }}">
@@ -661,6 +684,13 @@
                                                                     <i class="bi bi-eye"></i> Show
                                                                 </button>
                                                             @endif
+                                                        </form>
+                                                        <form action="{{ route('admin.menus.destroy', $child->id) }}" method="POST" class="d-inline ms-1" onsubmit="return confirm('Are you sure you want to delete menu \'{{ $child->title }}\'?');">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2 font-monospace" style="font-size: 11.5px; height: 26px; line-height: 24px;" title="Delete menu">
+                                                                <i class="bi bi-trash"></i>
+                                                            </button>
                                                         </form>
                                                     @endif
                                                 </td>
@@ -778,8 +808,15 @@
                                                             </button>
                                                         @endif
                                                     </form>
-                                                @endif
-                                            </td>
+                                                        <form action="{{ route('admin.menus.destroy', $menu->id) }}" method="POST" class="d-inline ms-1" onsubmit="return confirm('Are you sure you want to delete menu \'{{ $menu->title }}\'?');">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2 font-monospace" style="font-size: 11.5px; height: 26px; line-height: 24px;" title="Delete menu">
+                                                                <i class="bi bi-trash"></i>
+                                                            </button>
+                                                        </form>
+                                                    @endif
+                                                </td>
                                         </tr>
                                     @endif
                                 @endforeach
@@ -787,8 +824,6 @@
                         </table>
                     </div>
                 </div>
-            @endforeach
-        </div>
     </div>
 
     <script>

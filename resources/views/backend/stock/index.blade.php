@@ -131,7 +131,7 @@
                 </ul>
 
                 <!-- Reset Filters -->
-                @if(request()->hasAny(['search', 'warehouse_id', 'category_id', 'make_id', 'brand_id']) || $filter !== 'all')
+                @if(request()->hasAny(['search', 'warehouse_id', 'category_id', 'brand_id']) || $filter !== 'all')
                     <a href="{{ route('admin.stock.index') }}" class="btn btn-outline-secondary btn-sm">
                         <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
                     </a>
@@ -142,7 +142,7 @@
             <form action="{{ route('admin.stock.index') }}" method="GET" class="row g-2 align-items-center">
                 <input type="hidden" name="filter" value="{{ $filter }}">
 
-                <div class="col-12 col-xl-3">
+                <div class="col-12 col-xl-4">
                     <div class="input-group input-group-sm">
                         <span class="input-group-text"><i class="bi bi-search"></i></span>
                         <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="Search by name or SKU...">
@@ -172,17 +172,6 @@
                 </div>
 
                 <div class="col-6 col-md-3 col-xl-2">
-                    <select name="make_id" class="form-select form-select-sm" onchange="this.form.submit()">
-                        <option value="">All Makes</option>
-                        @foreach($makes as $mk)
-                            <option value="{{ $mk->id }}" {{ (string)request('make_id') === (string)$mk->id ? 'selected' : '' }}>
-                                {{ $mk->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div class="col-6 col-md-3 col-xl-2">
                     <select name="brand_id" class="form-select form-select-sm" onchange="this.form.submit()">
                         <option value="">All Brands</option>
                         @foreach($brands as $brand)
@@ -193,7 +182,7 @@
                     </select>
                 </div>
 
-                <div class="col-12 col-xl-1">
+                <div class="col-6 col-md-3 col-xl-2">
                     <button type="submit" class="btn btn-primary btn-sm w-100">Filter</button>
                 </div>
             </form>
@@ -231,11 +220,6 @@
                                 <td>
                                     <span class="badge bg-secondary-subtle text-body-secondary border-0 px-2 py-1">{{ $product->category->name }}</span>
                                     <div class="small text-muted mt-1 d-flex flex-wrap align-items-center gap-1" style="font-size: 11px;">
-                                        @if($product->make)
-                                            <span class="badge bg-body-secondary text-body-secondary border-0 px-1 py-0" title="Make">
-                                                {{ $product->make->name }}
-                                            </span>
-                                        @endif
                                         <span>{{ $product->brand?->name ?? '-' }}</span>
                                     </div>
                                 </td>

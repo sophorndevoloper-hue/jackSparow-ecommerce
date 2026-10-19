@@ -48,6 +48,8 @@ class Customer extends Authenticatable
         'total_spent',
         'credit_limit',
         'credit_balance',
+        'is_blocked',
+        'blocked_at',
         'email_verified_at',
     ];
 
@@ -70,12 +72,34 @@ class Customer extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'blocked_at' => 'datetime',
+            'is_blocked' => 'boolean',
             'password' => 'hashed',
             'orders_count' => 'integer',
             'total_spent' => 'decimal:2',
             'credit_limit' => 'decimal:2',
             'credit_balance' => 'decimal:2',
         ];
+    }
+
+    /**
+     * Determine if the customer account is currently blocked.
+     */
+    public function isBlocked(): bool
+    {
+        return (bool) $this->is_blocked;
+    }
+
+    /**
+     * Toggle the blocked status for this customer account.
+     */
+    public function toggleBlock(): bool
+    {
+        $this->is_blocked = ! $this->is_blocked;
+        $this->blocked_at = $this->is_blocked ? now() : null;
+        $this->save();
+
+        return (bool) $this->is_blocked;
     }
 
     /**

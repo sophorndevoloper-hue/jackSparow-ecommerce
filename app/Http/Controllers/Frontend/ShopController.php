@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductCollection;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 
@@ -16,7 +17,7 @@ class ShopController extends Controller
      */
     public function index(Request $request): View
     {
-        $query = Product::query()->active()->with(['brand', 'category']);
+        $query = Product::query()->active()->with(['brand', 'category', 'images', 'primaryImage']);
 
         // Filter by category slug
         if ($request->filled('category')) {
@@ -29,6 +30,13 @@ class ShopController extends Controller
         if ($request->filled('brand')) {
             $query->whereHas('brand', function ($q) use ($request) {
                 $q->where('slug', $request->input('brand'));
+            });
+        }
+
+        // Filter by product collection slug
+        if ($request->filled('collection')) {
+            $query->whereHas('collections', function ($q) use ($request) {
+                $q->where('slug', $request->input('collection'));
             });
         }
 
@@ -58,17 +66,32 @@ class ShopController extends Controller
         // Sorting
         $sort = $request->input('sort', 'newest');
         match ($sort) {
-            'price_asc' => $query->orderBy('price', 'asc'),
-            'price_desc' => $query->orderBy('price', 'desc'),
+            'bestseller', 'best_seller', 'bestsellers', 'best_selling' => $query
+                ->withSum('orderItems', 'quantity')
+                ->withCount(['storefrontProducts as is_curated_bestseller' => function ($q) {
+                    $q->where('section', 'bestseller')->where('is_active', true);
+                }])
+                ->orderByDesc('is_curated_bestseller')
+                ->orderByRaw(
+                    $query->getConnection()->getDriverName() === 'mysql'
+                        ? 'COALESCE(`order_items_sum_quantity`, 0) DESC'
+                        : '"order_items_sum_quantity" DESC NULLS LAST'
+                )
+                ->orderByDesc('is_featured')
+                ->latest('id'),
+            'price_asc' => $query->orderByRaw('COALESCE(sale_price, price) ASC')->orderBy('id', 'asc'),
+            'price_desc' => $query->orderByRaw('COALESCE(sale_price, price) DESC')->orderBy('id', 'desc'),
             'name_asc' => $query->orderBy('name', 'asc'),
-            default => $query->latest(),
+            'name_desc' => $query->orderBy('name', 'desc'),
+            default => $query->latest('id'),
         };
 
         $products = $query->paginate(12)->withQueryString();
 
         $categories = Category::query()->active()->withCount('products')->orderBy('sort_order')->get();
         $brands = Brand::query()->active()->withCount('products')->orderBy('name')->get();
+        $collections = ProductCollection::query()->active()->withCount('products')->orderBy('sort_order')->orderBy('name')->get();
 
-        return view('frontend.shop', compact('products', 'categories', 'brands', 'sort'));
+        return view('frontend.shop', compact('products', 'categories', 'brands', 'collections', 'sort'));
     }
 }

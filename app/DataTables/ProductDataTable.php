@@ -31,13 +31,15 @@ class ProductDataTable extends DataTable
                         </div>
                         <div>
                             <span class="fw-bold text-body-emphasis">'.e($p->name).'</span>
-                            <div class="text-muted small font-monospace">SKU: '.e($p->sku).'</div>
+                            <div class="d-flex align-items-center gap-2 mt-1">
+                                <span class="text-muted small font-monospace">SKU: '.e($p->sku).'</span>
+                                '.($p->model ? '<span class="badge bg-light text-primary border" style="font-size: 10px;"><i class="bi bi-cpu me-1"></i>'.e($p->model->name).'</span>' : '').'
+                            </div>
                         </div>
                     </div>
                 ';
             })
             ->addColumn('category', fn (Product $p) => $p->category->name ?? '-')
-            ->addColumn('make', fn (Product $p) => $p->make->name ?? '-')
             ->addColumn('brand', fn (Product $p) => $p->brand->name ?? '-')
             ->editColumn('price', fn (Product $p) => '$'.number_format($p->price, 2))
             ->editColumn('stock_quantity', function (Product $p) {
@@ -50,19 +52,53 @@ class ProductDataTable extends DataTable
 
                 return '<span class="badge bg-success-subtle text-success border border-success-subtle">In Stock ('.$p->stock_quantity.')</span>';
             })
+            ->editColumn('status', function (Product $p) {
+                if ($p->is_active) {
+                    return '<span class="badge bg-success-subtle text-success border-0 px-2 py-1"><i class="bi bi-circle-fill me-1" style="font-size: 6px; vertical-align: middle;"></i>Active</span>';
+                }
+
+                return '<span class="badge bg-secondary-subtle text-secondary border-0 px-2 py-1">Draft</span>';
+            })
             ->addColumn('action', function (Product $p) {
                 $editUrl = route('admin.products.edit', $p->id);
+                $destroyUrl = route('admin.products.destroy', $p->id);
+                $csrf = csrf_field();
+                $method = method_field('DELETE');
+
+                $deleteBtn = '';
+                if (auth()->guard('backend')->user()?->can('delete products')) {
+                    if ($p->canBeDeleted()) {
+                        $deleteBtn = '
+                            <form action="'.$destroyUrl.'" method="POST" class="d-inline" onsubmit="return confirm(\'Delete draft component \\\''.addslashes($p->name).'\\\'?\');">
+                                '.$csrf.'
+                                '.$method.'
+                                <button type="submit" class="btn btn-outline-danger" title="Delete Draft Component">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        ';
+                    } else {
+                        $deleteBtn = '
+                            <span class="d-inline-block" tabindex="0" title="'.e($p->getDeletionBlockReason()).'">
+                                <button type="button" class="btn btn-outline-secondary opacity-50" style="cursor: not-allowed; pointer-events: none;" disabled>
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </span>
+                        ';
+                    }
+                }
 
                 return '
                     <div class="btn-group btn-group-sm">
                         <a href="'.$editUrl.'" class="btn btn-outline-secondary" title="Edit Product">
                             <i class="bi bi-pencil"></i>
                         </a>
+                        '.$deleteBtn.'
                     </div>
                 ';
             })
             ->editColumn('updated_at', fn (Product $p) => $p->updated_at?->format('Y-m-d H:i') ?? '-')
-            ->rawColumns(['name', 'stock_quantity', 'action'])
+            ->rawColumns(['name', 'stock_quantity', 'status', 'action'])
             ->setRowId('id');
     }
 
@@ -73,7 +109,7 @@ class ProductDataTable extends DataTable
      */
     public function query(Product $model): QueryBuilder
     {
-        return $model->newQuery()->with(['category', 'brand', 'make', 'primaryImage'])->latest('updated_at');
+        return $model->newQuery()->with(['category', 'brand', 'model', 'primaryImage'])->latest('updated_at');
     }
 
     /**

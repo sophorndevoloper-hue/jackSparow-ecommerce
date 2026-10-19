@@ -291,7 +291,7 @@
             document.getElementById('stockTransferForm').addEventListener('submit', function (e) {
                 if (fromWarehouseSelect.value && toWarehouseSelect.value && fromWarehouseSelect.value === toWarehouseSelect.value) {
                     e.preventDefault();
-                    alert('Source warehouse and Destination warehouse cannot be the same facility.');
+                    window.adminNotify('Source warehouse and Destination warehouse cannot be the same facility.', 'warning', 'Invalid Warehouse Route');
                     toWarehouseSelect.focus();
                     return;
                 }
@@ -303,13 +303,13 @@
                     const qty = parseInt(row.querySelector('.qty-input')?.value || '0', 10);
                     if (!productId) {
                         e.preventDefault();
-                        alert('Please select a hardware component for all rows.');
+                        window.adminNotify('Please select a hardware component for all rows before proceeding.', 'warning', 'Component Missing');
                         row.querySelector('.product-search-input')?.focus();
                         return;
                     }
                     if (qty <= 0) {
                         e.preventDefault();
-                        alert('Transfer quantity must be at least 1 unit. Please select or scan serial numbers for the chosen component.');
+                        window.adminNotify('Transfer quantity must be at least 1 unit. Please select or scan serial numbers for the chosen component.', 'warning', 'Quantity Required');
                         return;
                     }
                 }
@@ -437,10 +437,8 @@
                                 <input type="file" class="d-none serial-file-input" accept=".txt,.csv">
                             </label>
                         </div>
-                        <textarea name="products[${index}][serials]" rows="4" class="form-control form-control-sm font-monospace serials-textarea" placeholder="Selected serial numbers will appear here line by line...&#10;You can also type or scan barcodes directly."></textarea>
-                        <div class="form-text small text-muted" style="font-size: 11px;">
-                            Selecting serials from the input box above adds them here line by line. Transfer quantity is automatically calculated.
-                        </div>
+                        <textarea name="products[${index}][serials]" rows="4" class="form-control form-control-sm font-monospace serials-textarea"></textarea>
+                        
                     </div>
                 </div>
             `;
@@ -635,7 +633,7 @@
                     if (totalRows > 1) {
                         card.remove();
                     } else {
-                        alert('A stock transfer must contain at least one component.');
+                        window.adminNotify('A stock transfer must contain at least one hardware component.', 'warning', 'Notice');
                     }
                 });
             }
@@ -863,7 +861,7 @@
             const transferQtyBadge = card.querySelector('.transfer-qty-badge');
 
             if (!warehouseId) {
-                alert('Please select a Source Warehouse first.');
+                window.adminNotify('Please select a Source Warehouse first before choosing components.', 'info', 'Source Warehouse Required');
                 if (fromWarehouseSelect) fromWarehouseSelect.focus();
                 return;
             }

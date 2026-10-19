@@ -74,4 +74,14 @@ class CustomerGroup extends Model
     {
         return $this->hasMany(ProductPriceTier::class);
     }
+
+    /**
+     * Payment terms associated with this customer group.
+     *
+     * @return HasMany<CustomerGroupPaymentTerm, $this>
+     */
+    public function paymentTerms(): HasMany
+    {
+        return $this->hasMany(CustomerGroupPaymentTerm::class, 'customer_group_id');
+    }
 }

@@ -22,6 +22,9 @@
                     </a>
                 @endcanany
                 @can('create products')
+                    <button type="button" class="btn btn-outline-success btn-sm me-2" data-bs-toggle="modal" data-bs-target="#importProductsModal">
+                        <i class="bi bi-file-earmark-arrow-up me-1"></i> Import Products
+                    </button>
                     <a href="{{ route('admin.products.create') }}" class="btn btn-primary btn-sm">
                         <i class="bi bi-plus-circle me-1"></i> Add Computer Part
                     </a>
@@ -43,10 +46,25 @@
             </div>
         @endif
 
+        @if(session('import_errors') && count(session('import_errors')) > 0)
+            <div class="alert alert-warning alert-dismissible fade show mt-3" role="alert">
+                <div class="d-flex align-items-center mb-1">
+                    <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+                    <strong>Some rows had errors during import:</strong>
+                </div>
+                <ul class="mb-0 ps-3 small">
+                    @foreach(session('import_errors') as $err)
+                        <li>{{ $err }}</li>
+                    @endforeach
+                </ul>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+
         <!-- Filter & Search Bar -->
         <div class="panel p-3 mb-3 mt-3">
             <form action="{{ route('admin.products.index') }}" method="GET" class="row g-2 align-items-center">
-                <div class="col-12 col-md-3">
+                <div class="col-12 col-md-4">
                     <div class="input-group input-group-sm">
                         <span class="input-group-text"><i class="bi bi-search"></i></span>
                         <input type="search" name="search" value="{{ request('search') }}" class="form-control" placeholder="Search by name, SKU, MPN...">
@@ -76,10 +94,10 @@
                 </div>
 
                 <div class="col-6 col-md-2">
-                    <select name="make_id" class="form-select form-select-sm" onchange="this.form.submit()">
-                        <option value="">All Makes</option>
-                        @foreach($makes as $m)
-                            <option value="{{ $m->id }}" {{ request('make_id') == $m->id ? 'selected' : '' }}>
+                    <select name="model_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">All Models</option>
+                        @foreach($models as $m)
+                            <option value="{{ $m->id }}" {{ request('model_id') == $m->id ? 'selected' : '' }}>
                                 {{ $m->name }}
                             </option>
                         @endforeach
@@ -98,7 +116,7 @@
                     <button type="submit" class="btn btn-primary btn-sm flex-fill" title="Filter">
                         <i class="bi bi-funnel"></i>
                     </button>
-                    @if(request()->hasAny(['search', 'category_id', 'brand_id', 'make_id', 'stock']))
+                    @if(request()->hasAny(['search', 'category_id', 'brand_id', 'model_id', 'stock']))
                         <a href="{{ route('admin.products.index') }}" class="btn btn-outline-secondary btn-sm" title="Reset Filters">
                             <i class="bi bi-arrow-counterclockwise"></i>
                         </a>
@@ -158,8 +176,8 @@
                                         @if($product->brand)
                                             <span class="text-body-secondary">{{ $product->brand->name }}</span>
                                         @endif
-                                        @if($product->make)
-                                            <span class="badge bg-body-secondary text-body-secondary border-0 px-1 py-0">Make: {{ $product->make->name }}</span>
+                                        @if($product->model)
+                                            <span class="badge bg-light text-primary border px-1 py-0"><i class="bi bi-cpu me-1"></i>{{ $product->model->name }}</span>
                                         @endif
                                         @if($product->socket)
                                             <span class="badge bg-body-secondary text-body-secondary border-0 px-1 py-0 font-monospace">{{ $product->socket }}</span>
@@ -247,13 +265,21 @@
                                             </a>
                                         @endcan
                                         @can('delete products')
-                                            <form action="{{ route('admin.products.destroy', $product->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this computer part?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn-ghost text-danger" title="Delete">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            </form>
+                                            @if($product->canBeDeleted())
+                                                <form action="{{ route('admin.products.destroy', $product->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete draft component \'{{ addslashes($product->name) }}\'? This action cannot be undone.');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn-ghost text-danger" title="Delete Draft Component">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </form>
+                                            @else
+                                                <span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip" title="{{ $product->getDeletionBlockReason() }}">
+                                                    <button type="button" class="btn-ghost text-secondary opacity-50" style="cursor: not-allowed; pointer-events: none;" disabled>
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </span>
+                                            @endif
                                         @endcan
                                     </div>
                                 </td>
@@ -501,5 +527,217 @@
                 }
             }
         });
+    </script>
+
+    <!-- Modal: Bulk Product File Import -->
+    <div class="modal fade" id="importProductsModal" tabindex="-1" aria-labelledby="importProductsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content shadow-lg border-0">
+                <form action="{{ route('admin.products.import') }}" method="POST" enctype="multipart/form-data" id="productImportForm">
+                    @csrf
+                    <div class="modal-header bg-dark text-white border-bottom border-secondary">
+                        <div class="d-flex align-items-center">
+                            <span class="p-2 bg-success bg-opacity-25 text-success rounded-3 me-2">
+                                <i class="bi bi-file-earmark-arrow-up fs-5"></i>
+                            </span>
+                            <div>
+                                <h5 class="modal-title mb-0" id="importProductsModalLabel">Bulk Import Hardware Products</h5>
+                                <small class="text-white-50">Upload Excel (.xlsx, .xls) file to batch create components</small>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+
+                    <div class="modal-body p-4">
+                        <!-- Template Download Banner -->
+                        <div class="p-3 mb-4 rounded-3 border bg-light d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-file-earmark-excel fs-2 text-success me-3"></i>
+                                <div>
+                                    <div class="fw-semibold">Need a starting Excel template?</div>
+                                    <small class="text-muted">Download pre-formatted Excel template complete with sample CPUs, GPUs, RAM, and SSDs.</small>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2 shrink-0">
+                                <a href="{{ route('admin.products.import.template', ['format' => 'xlsx']) }}" class="btn btn-sm btn-success">
+                                    <i class="bi bi-file-earmark-spreadsheet me-1"></i> Download Excel (.xlsx) Template
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- File Input -->
+                        <div class="mb-4">
+                            <label for="productImportFileInput" class="form-label fw-semibold">
+                                Select Excel File to Upload <span class="text-danger">*</span>
+                            </label>
+                            <input type="file" name="file" id="productImportFileInput" class="form-control" accept=".xlsx,.xls" required>
+                            <div class="form-text text-muted">
+                                Supported format: <strong>Excel (.xlsx, .xls)</strong>. Max file size: 10MB.
+                            </div>
+                        </div>
+
+                        <!-- Fallback / Match Options -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <label class="form-label small fw-medium text-muted">Default Category Fallback</label>
+                                <select name="default_category_id" class="form-select form-select-sm">
+                                    <option value="">Auto-create from file</option>
+                                    @foreach($categories as $cat)
+                                        <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                    @endforeach
+                                </select>
+                                <div class="form-text x-small">Used if row category is empty.</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-medium text-muted">Default Brand Fallback</label>
+                                <select name="default_brand_id" class="form-select form-select-sm">
+                                    <option value="">Auto-create from file</option>
+                                    @foreach($brands as $b)
+                                        <option value="{{ $b->id }}">{{ $b->name }}</option>
+                                    @endforeach
+                                </select>
+                                <div class="form-text x-small">Used if row brand is empty.</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-medium text-muted">Initial Stock Warehouse</label>
+                                <select name="default_warehouse_id" class="form-select form-select-sm">
+                                    <option value="">Default Warehouse</option>
+                                    @foreach($warehouses as $wh)
+                                        <option value="{{ $wh->id }}">{{ $wh->name }} ({{ $wh->code }})</option>
+                                    @endforeach
+                                </select>
+                                <div class="form-text x-small">For non-serialized inventory.</div>
+                            </div>
+                        </div>
+
+                        <div class="form-check form-switch mb-4">
+                            <input class="form-check-input" type="checkbox" name="update_existing" value="1" id="updateExistingCheckbox" checked>
+                            <label class="form-check-label fw-semibold small" for="updateExistingCheckbox">
+                                Update existing products if SKU matches
+                            </label>
+                            <div class="form-text x-small text-muted">
+                                If checked, existing products matching SKU will have their pricing, specifications, and details updated.
+                            </div>
+                        </div>
+
+                        <!-- Live File Preview Section -->
+                        <div id="importPreviewContainer" style="display: none;" class="mt-3">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <h6 class="mb-0 fw-semibold text-primary">
+                                    <i class="bi bi-eye me-1"></i> File Preview: <span id="previewCountBadge" class="badge bg-primary">0 rows</span>
+                                </h6>
+                                <small class="text-muted">Showing first up to 10 rows</small>
+                            </div>
+                            <div class="table-responsive border rounded bg-white" style="max-height: 220px;">
+                                <table class="table table-sm table-hover align-middle mb-0 font-monospace" style="font-size: 0.8rem;">
+                                    <thead class="table-light sticky-top">
+                                        <tr>
+                                            <th>SKU</th>
+                                            <th>Name</th>
+                                            <th>Category</th>
+                                            <th>Brand</th>
+                                            <th class="text-end">Price</th>
+                                            <th class="text-center">Stock</th>
+                                            <th>Tracking</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="previewTableBody">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div id="previewLoadingSpinner" style="display: none;" class="text-center py-3 text-muted">
+                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                            <span>Analyzing file contents...</span>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer bg-light border-top">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" id="btnConfirmImport" class="btn btn-success btn-sm px-3">
+                            <i class="bi bi-cloud-upload me-1"></i> Start Import
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const importFileInput = document.getElementById('productImportFileInput');
+        const previewContainer = document.getElementById('importPreviewContainer');
+        const previewSpinner = document.getElementById('previewLoadingSpinner');
+        const previewTableBody = document.getElementById('previewTableBody');
+        const previewCountBadge = document.getElementById('previewCountBadge');
+        const importForm = document.getElementById('productImportForm');
+        const btnConfirmImport = document.getElementById('btnConfirmImport');
+
+        if (importFileInput) {
+            importFileInput.addEventListener('change', function () {
+                const file = this.files[0];
+                if (!file) {
+                    previewContainer.style.display = 'none';
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('_token', '{{ csrf_token() }}');
+
+                previewSpinner.style.display = 'block';
+                previewContainer.style.display = 'none';
+
+                fetch('{{ route("admin.products.import-preview") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                    body: formData,
+                })
+                .then(res => res.json())
+                .then(data => {
+                    previewSpinner.style.display = 'none';
+                    if (data.success && data.preview) {
+                        previewCountBadge.innerText = `${data.total} total items detected`;
+                        previewTableBody.innerHTML = '';
+
+                        data.preview.forEach(row => {
+                            const tr = document.createElement('tr');
+                            const isSerialized = String(row.requires_serial_tracking).toLowerCase() === '1' ||
+                                                 String(row.requires_serial_tracking).toLowerCase() === 'true' ||
+                                                 String(row.requires_serial_tracking).toLowerCase() === 'yes';
+
+                            tr.innerHTML = `
+                                <td class="fw-bold text-secondary">${row.sku || '<span class="text-muted fst-italic">Auto</span>'}</td>
+                                <td class="text-truncate" style="max-width: 220px;" title="${row.name || ''}">${row.name || '-'}</td>
+                                <td>${row.category || '<span class="text-muted">-</span>'}</td>
+                                <td>${row.brand || '<span class="text-muted">-</span>'}</td>
+                                <td class="text-end fw-semibold">$${parseFloat(row.price || 0).toFixed(2)}</td>
+                                <td class="text-center">${isSerialized ? '0 (SN)' : (row.stock_quantity || 0)}</td>
+                                <td>
+                                    ${isSerialized 
+                                        ? '<span class="badge bg-warning text-dark"><i class="bi bi-upc-scan me-1"></i>Serial</span>' 
+                                        : '<span class="badge bg-secondary">Bulk</span>'}
+                                </td>
+                            `;
+                            previewTableBody.appendChild(tr);
+                        });
+
+                        previewContainer.style.display = 'block';
+                    }
+                })
+                .catch(() => {
+                    previewSpinner.style.display = 'none';
+                });
+            });
+        }
+
+        if (importForm) {
+            importForm.addEventListener('submit', function () {
+                btnConfirmImport.disabled = true;
+                btnConfirmImport.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Importing Products...';
+            });
+        }
     </script>
 </x-app-layout>

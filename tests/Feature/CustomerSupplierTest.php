@@ -16,9 +16,6 @@ it('stores registered customers in the frontend_users table as simple customers'
         'email' => 'jane@frontend.test',
         'password' => 'password123',
         'password_confirmation' => 'password123',
-        'phone' => '+1 (555) 345-6789',
-        'city' => 'Seattle',
-        'address' => '742 Evergreen Terrace',
     ]);
 
     $response->assertRedirect(route('home'));
@@ -27,7 +24,6 @@ it('stores registered customers in the frontend_users table as simple customers'
     expect($frontendUser)->not->toBeNull();
     expect($frontendUser->customer_type)->toBe('simple');
     expect($frontendUser->orders_count)->toBe(0);
-    expect($frontendUser->city)->toBe('Seattle');
 
     // Confirm that the user is NOT stored in the users table
     expect(User::where('email', 'jane@frontend.test')->exists())->toBeFalse();
@@ -84,35 +80,31 @@ it('automatically promotes a simple customer to special customer when order thre
     expect($customer->fresh()->isSpecial())->toBeTrue();
 });
 
-it('allows admin to view customers and filter by simple and special tiers', function () {
+it('allows admin to view and search customers', function () {
     $admin = User::factory()->create();
     $admin->assignRole(Role::findByName('admin', 'backend'));
 
-    $simpleCustomer = FrontendUser::factory()->create([
+    $customerOne = FrontendUser::factory()->create([
         'name' => 'Regular Buyer',
-        'customer_type' => 'simple',
+        'city' => 'Austin',
     ]);
 
-    $specialCustomer = FrontendUser::factory()->create([
-        'name' => 'VIP Pro Overclocker',
-        'customer_type' => 'special',
+    $customerTwo = FrontendUser::factory()->create([
+        'name' => 'Hardware Pro Overclocker',
+        'city' => 'Seattle',
     ]);
 
     // View all
     $responseAll = $this->actingAs($admin, 'backend')->get(route('admin.customers.index'));
     $responseAll->assertStatus(200);
     $responseAll->assertSee('Regular Buyer');
-    $responseAll->assertSee('VIP Pro Overclocker');
+    $responseAll->assertSee('Hardware Pro Overclocker');
 
-    // Filter simple
-    $responseSimple = $this->actingAs($admin, 'backend')->get(route('admin.customers.index', ['type' => 'simple']));
-    $responseSimple->assertStatus(200);
-    $responseSimple->assertSee('Regular Buyer');
-
-    // Filter special
-    $responseSpecial = $this->actingAs($admin, 'backend')->get(route('admin.customers.index', ['type' => 'special']));
-    $responseSpecial->assertStatus(200);
-    $responseSpecial->assertSee('VIP Pro Overclocker');
+    // Search by name
+    $responseSearch = $this->actingAs($admin, 'backend')->get(route('admin.customers.index', ['search' => 'Regular']));
+    $responseSearch->assertStatus(200);
+    $responseSearch->assertSee('Regular Buyer');
+    $responseSearch->assertDontSee('Hardware Pro Overclocker');
 });
 
 it('allows admin to toggle customer between simple and special tiers', function () {

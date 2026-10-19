@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="JackSparow TECH admin authentication portal">
+    <link rel="icon" type="image/png" href="{{ asset('assets/images/brand/logo/jacksparrow-icon.png') }}">
     <title>{{ config('app.name', 'JackSparow TECH') }} - Admin Portal</title>
 
     <!-- Prevent Flash of Light Theme on Reload / Navigation (Instant Theme Initialization) -->

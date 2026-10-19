@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -32,13 +31,11 @@ Route::get('/dashboard', function () {
 // Unified User Account Profile
 Route::middleware('auth:backend,frontend')->group(function () {
     Route::get('/profile', function () {
-        if (auth('backend')->check()) {
+        $backendUser = auth('backend')->user();
+        if ($backendUser && ($backendUser->hasRole('admin', 'backend') || $backendUser->hasRole('superadmin', 'backend') || $backendUser->hasRole('staff', 'backend'))) {
             return redirect()->route('admin.profile.edit');
         }
 
-        return app(ProfileController::class)->edit(request());
+        return redirect()->route('customer.profile');
     })->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::put('/password', [ProfileController::class, 'updatePassword'])->name('password.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });

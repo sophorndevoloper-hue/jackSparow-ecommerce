@@ -21,20 +21,58 @@
     <div class="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden p-6 sm:p-10 mb-12">
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
             <!-- Product Visual Presentation -->
-            <div class="lg:col-span-5 flex flex-col justify-center">
-                <div class="h-80 sm:h-96 bg-gray-50 rounded-2xl border border-gray-200 flex flex-col items-center justify-center p-8 relative overflow-hidden">
+            <div class="lg:col-span-5 flex flex-col">
+                <div class="h-80 sm:h-96 bg-white rounded-2xl border border-gray-200 flex items-center justify-center p-6 relative overflow-hidden group">
+                    <!-- Favorite Toggle Button on Image -->
+                    <button
+                        type="button"
+                        onclick="window.toggleFavorite({{ $product->id }}, this)"
+                        data-product-id="{{ $product->id }}"
+                        class="favorite-toggle-btn absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-white/95 backdrop-blur-sm border border-slate-200 {{ $isFavorited ? 'text-rose-600' : 'text-slate-400' }} hover:text-rose-600 hover:bg-rose-50 hover:scale-110 flex items-center justify-center transition-all shadow-xs cursor-pointer"
+                        title="Save to Favorites"
+                        aria-label="Save to Favorites"
+                    >
+                        <i class="bi {{ $isFavorited ? 'bi-heart-fill text-rose-600' : 'bi-heart' }} text-sm"></i>
+                    </button>
+
                     @if($product->sale_price)
-                        <span class="absolute top-4 left-4 bg-rose-600 text-white text-xs font-extrabold px-3 py-1 rounded-md shadow-xs">
+                        <span class="absolute top-4 left-4 z-10 bg-rose-600 text-white text-xs font-extrabold px-3 py-1 rounded-md shadow-xs">
                             SAVE ${{ number_format($product->price - $product->sale_price, 2) }}
                         </span>
                     @endif
 
-                    <div class="w-28 h-28 rounded-3xl bg-blue-100 text-blue-600 flex items-center justify-center mb-4 shadow-sm">
-                        <svg class="w-14 h-14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
-                    </div>
-                    <span class="text-xs font-mono font-bold text-gray-500 uppercase tracking-widest">{{ $product->sku }}</span>
-                    <span class="text-xs text-gray-400 mt-1">Retail Boxed Hardware Component</span>
+                    @if($product->primary_image_url)
+                        <img 
+                            id="mainProductImage"
+                            src="{{ $product->primary_image_url }}" 
+                            alt="{{ $product->name }}" 
+                            class="w-full h-full object-contain p-2 transition duration-300 group-hover:scale-105"
+                        >
+                    @else
+                        <div class="flex flex-col items-center justify-center text-center">
+                            <div class="w-24 h-24 rounded-3xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3 shadow-xs">
+                                <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
+                            </div>
+                            <span class="text-xs font-mono font-bold text-gray-500 uppercase tracking-widest">{{ $product->sku }}</span>
+                            <span class="text-xs text-gray-400 mt-1">Genuine Hardware Component</span>
+                        </div>
+                    @endif
                 </div>
+
+                <!-- Multiple Images Thumbnails Gallery -->
+                @if($product->images->count() > 1)
+                    <div class="flex items-center gap-2 mt-4 overflow-x-auto pb-1">
+                        @foreach($product->images as $img)
+                            <button 
+                                type="button" 
+                                onclick="document.getElementById('mainProductImage').src = '{{ $img->image_url }}'; document.querySelectorAll('.gallery-thumb-btn').forEach(b => b.classList.remove('ring-2', 'ring-blue-600')); this.classList.add('ring-2', 'ring-blue-600');"
+                                class="gallery-thumb-btn w-16 h-16 rounded-xl border border-gray-200 bg-white p-1 shrink-0 overflow-hidden hover:border-blue-500 transition {{ $loop->first ? 'ring-2 ring-blue-600' : '' }}"
+                            >
+                                <img src="{{ $img->image_url }}" alt="{{ $product->name }}" class="w-full h-full object-contain">
+                            </button>
+                        @endforeach
+                    </div>
+                @endif
             </div>
 
             <!-- Product Details & Purchase Form -->
@@ -128,14 +166,25 @@
                         >
                     </div>
 
-                    <div class="flex-1 pt-5">
+                    <div class="flex-1 pt-5 flex items-center gap-3">
                         <button
                             type="submit"
                             @if($product->stock_quantity <= 0) disabled @endif
-                            class="w-full py-3.5 px-6 font-bold text-sm text-white rounded-xl shadow-md transition flex items-center justify-center gap-2 {{ $product->stock_quantity > 0 ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/30' : 'bg-gray-300 text-gray-500 cursor-not-allowed' }}"
+                            class="flex-1 py-3.5 px-6 font-bold text-sm text-white rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer {{ $product->stock_quantity > 0 ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/30' : 'bg-gray-300 text-gray-500 cursor-not-allowed' }}"
                         >
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
                             <span>{{ $product->stock_quantity > 0 ? 'Add to Cart' : 'Currently Out of Stock' }}</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onclick="window.toggleFavorite({{ $product->id }}, this)"
+                            data-product-id="{{ $product->id }}"
+                            class="favorite-toggle-btn h-12 w-12 rounded-xl border {{ $isFavorited ? 'border-rose-300 bg-rose-50 text-rose-600' : 'border-slate-200 bg-white text-slate-400 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200' }} flex items-center justify-center transition-all shadow-xs cursor-pointer shrink-0"
+                            title="Save to Favorites"
+                            aria-label="Save to Favorites"
+                        >
+                            <i class="bi {{ $isFavorited ? 'bi-heart-fill text-rose-600' : 'bi-heart' }} text-lg"></i>
                         </button>
                     </div>
                 </form>
@@ -182,18 +231,96 @@
             <h2 class="text-xl font-extrabold text-gray-900 tracking-tight mb-6">Similar Components in {{ $product->category->name }}</h2>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 @foreach($relatedProducts as $related)
-                    <div class="bg-white rounded-2xl border border-gray-200 p-5 flex flex-col justify-between hover:shadow-md transition">
+                    <div class="bg-white rounded-2xl border border-gray-200 p-4 flex flex-col justify-between hover:shadow-md transition relative group">
+                        <!-- Floating Favorite Button -->
+                        <button
+                            type="button"
+                            onclick="window.toggleFavorite({{ $related->id }}, this)"
+                            data-product-id="{{ $related->id }}"
+                            class="favorite-toggle-btn absolute top-3 right-3 w-8 h-8 rounded-full bg-white/95 backdrop-blur-sm border border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 hover:scale-110 flex items-center justify-center transition shadow-2xs z-10 cursor-pointer"
+                            title="Save to favorites"
+                        >
+                            <i class="bi {{ in_array($related->id, $userFavoriteIds ?? [], true) ? 'bi-heart-fill text-rose-600' : 'bi-heart' }} text-xs"></i>
+                        </button>
+
                         <div>
-                            <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">{{ $related->brand?->name }}</span>
-                            <h3 class="mt-1 font-bold text-sm text-gray-900 line-clamp-2">
-                                <a href="{{ route('product.show', $related->slug) }}" class="hover:text-blue-600 transition">
+                            <a href="{{ route('product.show', $related->slug) }}" class="block">
+                                <div class="h-36 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center p-2 mb-3 overflow-hidden">
+                                    @if($related->primary_image_url)
+                                        <img src="{{ $related->primary_image_url }}" alt="{{ $related->name }}" class="w-full h-full object-contain hover:scale-105 transition duration-200">
+                                    @else
+                                        <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
+                                        </div>
+                                    @endif
+                                </div>
+                                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">{{ $related->brand?->name }}</span>
+                                <h3 class="mt-1 font-bold text-sm text-gray-900 line-clamp-2 hover:text-blue-600 transition">
                                     {{ $related->name }}
-                                </a>
-                            </h3>
+                                </h3>
+                            </a>
                         </div>
                         <div class="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
                             <span class="font-extrabold text-base text-gray-900">${{ number_format($related->effective_price, 2) }}</span>
                             <a href="{{ route('product.show', $related->slug) }}" class="text-xs font-semibold text-blue-600 hover:underline">View &rarr;</a>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
+    <!-- Recently Viewed Components Section -->
+    @if(isset($recentlyViewed) && $recentlyViewed->count() > 0)
+        <div class="mt-14 pt-10 border-t border-slate-200">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-xl font-extrabold text-gray-900 tracking-tight flex items-center gap-2">
+                        <i class="bi bi-clock-history text-blue-600"></i>
+                        <span>Recently Viewed Components</span>
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-0.5">Pick up where you left off in your PC hardware build</p>
+                </div>
+                <a href="{{ route('recently-viewed.index') }}" class="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1">
+                    <span>View All History</span>
+                    <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                @foreach($recentlyViewed as $recent)
+                    <div class="bg-white rounded-2xl border border-gray-200 p-4 flex flex-col justify-between hover:shadow-md transition relative group">
+                        <!-- Floating Favorite Heart Button -->
+                        <button
+                            type="button"
+                            onclick="window.toggleFavorite({{ $recent->id }}, this)"
+                            data-product-id="{{ $recent->id }}"
+                            class="favorite-toggle-btn absolute top-3 right-3 w-8 h-8 rounded-full bg-white/95 backdrop-blur-sm border border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 hover:scale-110 flex items-center justify-center transition shadow-2xs z-10 cursor-pointer"
+                            title="Save to favorites"
+                        >
+                            <i class="bi {{ in_array($recent->id, $userFavoriteIds ?? [], true) ? 'bi-heart-fill text-rose-600' : 'bi-heart' }} text-xs"></i>
+                        </button>
+
+                        <div>
+                            <a href="{{ route('product.show', $recent->slug) }}" class="block">
+                                <div class="h-36 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center p-2 mb-3 overflow-hidden">
+                                    @if($recent->primary_image_url)
+                                        <img src="{{ $recent->primary_image_url }}" alt="{{ $recent->name }}" class="w-full h-full object-contain hover:scale-105 transition duration-200">
+                                    @else
+                                        <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
+                                        </div>
+                                    @endif
+                                </div>
+                                <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">{{ $recent->brand?->name }}</span>
+                                <h3 class="mt-1 font-bold text-sm text-gray-900 line-clamp-2 hover:text-blue-600 transition">
+                                    {{ $recent->name }}
+                                </h3>
+                            </a>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+                            <span class="font-extrabold text-base text-gray-900">${{ number_format($recent->effective_price, 2) }}</span>
+                            <a href="{{ route('product.show', $recent->slug) }}" class="text-xs font-semibold text-blue-600 hover:underline">View &rarr;</a>
                         </div>
                     </div>
                 @endforeach

@@ -26,6 +26,7 @@ class ProductFactory extends Factory
         return [
             'category_id' => Category::factory(),
             'brand_id' => Brand::factory(),
+            'model_id' => null,
             'name' => ucwords($name),
             'slug' => str()->slug($name).'-'.fake()->unique()->randomNumber(4),
             'sku' => strtoupper(fake()->bothify('COMP-###-???')),

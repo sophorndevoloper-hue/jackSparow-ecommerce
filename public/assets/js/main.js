@@ -214,11 +214,13 @@
     function addCloseHandlers(items) {
       Array.prototype.forEach.call(items, function (item) {
         item.addEventListener("click", function () {
-          if (!isDesktop()) {
-            closeMobileSidebar();
-          }
+          closeMobileSidebar();
         });
       });
+    }
+
+    if (isDesktop()) {
+      body.classList.remove("sidebar-open");
     }
 
     if ((document.documentElement.classList.contains("sidebar-mini") || getSavedMiniState(storageAvailable)) && isDesktop()) {

@@ -30,7 +30,7 @@ class SerialNumberDataTable extends DataTable
                 $cls = match ($sn->status) {
                     SerialNumber::STATUS_IN_STOCK => 'bg-success-subtle text-success border border-success-subtle',
                     SerialNumber::STATUS_ALLOCATED => 'bg-info-subtle text-info border border-info-subtle',
-                    SerialNumber::STATUS_SHIPPED => 'bg-primary-subtle text-primary border border-primary-subtle',
+                    SerialNumber::STATUS_SHIPPED, SerialNumber::STATUS_SOLD, 'sold', 'SOLD' => 'bg-primary-subtle text-primary border border-primary-subtle',
                     SerialNumber::STATUS_RETURNED_RMA => 'bg-warning-subtle text-warning border border-warning-subtle',
                     SerialNumber::STATUS_DEFECTIVE_SCRAP => 'bg-danger-subtle text-danger border border-danger-subtle',
                     default => 'bg-secondary',
@@ -40,12 +40,12 @@ class SerialNumberDataTable extends DataTable
             })
             ->editColumn('warranty_end_date', fn (SerialNumber $sn) => $sn->warranty_end_date ? $sn->warranty_end_date->format('M d, Y') : '<span class="text-muted">-</span>')
             ->addColumn('action', function (SerialNumber $sn) {
-                $editUrl = route('admin.serial-numbers.edit', $sn->id);
+                $warrantyUrl = route('admin.serial-numbers.warranty', $sn->id);
 
                 return '
                     <div class="btn-group btn-group-sm">
-                        <a href="'.$editUrl.'" class="btn btn-outline-secondary" title="Edit Serial">
-                            <i class="bi bi-pencil"></i>
+                        <a href="'.$warrantyUrl.'" target="_blank" class="btn btn-outline-info" title="Print Hardware Warranty Certificate">
+                            <i class="bi bi-printer"></i>
                         </a>
                     </div>
                 ';

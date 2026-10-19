@@ -11,20 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('makes', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->string('slug')->unique();
-            $table->string('logo')->nullable();
-            $table->string('website')->nullable();
-            $table->text('description')->nullable();
-            $table->boolean('is_active')->default(true);
-            $table->timestamps();
-        });
-
-        Schema::table('products', function (Blueprint $table) {
-            $table->foreignId('make_id')->nullable()->after('brand_id')->constrained('makes')->nullOnDelete();
-        });
+        // Makes removed from application in favor of Brands
     }
 
     /**

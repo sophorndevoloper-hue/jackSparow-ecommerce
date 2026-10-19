@@ -1093,6 +1093,13 @@ html[data-theme="dark"] .profile-button .avatar-sm {
   body.sidebar-hidden .admin-main {
     margin-left: 0 !important;
   }
+
+  .sidebar-backdrop,
+  body.sidebar-open .sidebar-backdrop {
+    display: none !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+  }
 }
 
 @media (max-width: 991.98px) {

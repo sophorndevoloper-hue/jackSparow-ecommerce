@@ -28,22 +28,29 @@ class OrderController extends Controller
     public function myOrders(Request $request): View
     {
         $customerId = auth('frontend')->id();
-        $userId = auth('backend')->id();
 
-        $orders = Order::query()
-            ->where(function ($q) use ($customerId, $userId) {
-                if ($customerId) {
-                    $q->where('frontend_user_id', $customerId)
-                        ->orWhere('customer_id', $customerId);
-                }
-                if ($userId) {
-                    $q->orWhere('user_id', $userId);
-                }
-            })
-            ->with(['items'])
+        $baseQuery = Order::query()
+            ->where(function ($q) use ($customerId) {
+                $q->where('frontend_user_id', $customerId)
+                    ->orWhere('customer_id', $customerId);
+            });
+
+        $totalOrdersCount = (clone $baseQuery)->count();
+        $totalSpent = (clone $baseQuery)->where('status', '!=', 'cancelled')->sum('total_amount');
+        $activeOrdersCount = (clone $baseQuery)->whereIn('status', ['pending', 'processing', 'shipped'])->count();
+        $deliveredOrdersCount = (clone $baseQuery)->where('status', 'delivered')->count();
+
+        $orders = $baseQuery
+            ->with(['items.product'])
             ->latest()
             ->paginate(10);
 
-        return view('frontend.my-orders', compact('orders'));
+        return view('frontend.my-orders', compact(
+            'orders',
+            'totalOrdersCount',
+            'totalSpent',
+            'activeOrdersCount',
+            'deliveredOrdersCount'
+        ));
     }
 }

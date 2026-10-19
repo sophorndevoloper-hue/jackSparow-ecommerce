@@ -130,8 +130,13 @@ class BackendAuthController extends Controller
     {
         Auth::guard('backend')->logout();
 
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        // Preserve frontend customer session if a customer is also logged in
+        if (Auth::guard('frontend')->check()) {
+            $request->session()->regenerateToken();
+        } else {
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
 
         return redirect()->route('admin.login');
     }

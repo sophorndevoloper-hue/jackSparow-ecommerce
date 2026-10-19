@@ -97,7 +97,7 @@
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label fw-bold small">Manufacturer / Brand</label>
-                                        <select name="brand_id" class="form-select">
+                                        <select name="brand_id" id="productBrandSelect" class="form-select">
                                             <option value="">Select Brand (Optional)</option>
                                             @foreach($brands as $b)
                                                 <option value="{{ $b->id }}" {{ old('brand_id', $product->brand_id) == $b->id ? 'selected' : '' }}>
@@ -107,15 +107,16 @@
                                         </select>
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label fw-bold small">Hardware Make / OEM</label>
-                                        <select name="make_id" class="form-select">
-                                            <option value="">Select Make (Optional)</option>
-                                            @foreach($makes as $m)
-                                                <option value="{{ $m->id }}" {{ old('make_id', $product->make_id) == $m->id ? 'selected' : '' }}>
-                                                    {{ $m->name }}
+                                        <label class="form-label fw-bold small">Hardware Model / Series</label>
+                                        <select name="model_id" id="productModelSelect" class="form-select">
+                                            <option value="">Select Model (Optional)</option>
+                                            @foreach($models as $m)
+                                                <option value="{{ $m->id }}" data-brand="{{ $m->brand_id }}" {{ old('model_id', $product->model_id) == $m->id ? 'selected' : '' }}>
+                                                    {{ $m->name }} ({{ $m->brand?->name }})
                                                 </option>
                                             @endforeach
                                         </select>
+                                        <div class="form-text small" style="font-size: 11px;">Filtered automatically when Brand is selected.</div>
                                     </div>
                                 </div>
 
@@ -610,7 +611,20 @@
                 <div>
                     <span class="text-muted small">All changes to specifications, tier pricing, and hardware identifiers will be updated immediately.</span>
                 </div>
-                <div class="d-flex gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    @can('delete products')
+                        @if($product->canBeDeleted())
+                            <button type="button" class="btn btn-outline-danger" onclick="if(confirm('Are you sure you want to delete draft component \'{{ addslashes($product->name) }}\'? This action cannot be undone.')) { document.getElementById('deleteProductForm').submit(); }">
+                                <i class="bi bi-trash me-1"></i> Delete Draft Part
+                            </button>
+                        @else
+                            <span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip" title="{{ $product->getDeletionBlockReason() }}">
+                                <button type="button" class="btn btn-outline-danger opacity-50" style="cursor: not-allowed;" disabled>
+                                    <i class="bi bi-trash me-1"></i> Delete Part
+                                </button>
+                            </span>
+                        @endif
+                    @endcan
                     <a href="{{ route('admin.products.index') }}" class="btn btn-outline-secondary">Cancel</a>
                     <button type="submit" class="btn btn-primary fw-bold px-4 shadow-sm">
                         <i class="bi bi-save me-1"></i> Update Hardware Part
@@ -618,6 +632,13 @@
                 </div>
             </div>
         </form>
+
+        @can('delete products')
+            <form id="deleteProductForm" action="{{ route('admin.products.destroy', $product->id) }}" method="POST" class="d-none">
+                @csrf
+                @method('DELETE')
+            </form>
+        @endcan
     </div>
 
     <!-- Modal for Quick Ingesting Serial Numbers -->
@@ -1213,6 +1234,46 @@ SN-AMD-90003" autocomplete="off">{{ $errors->has('serials_text') ? old('serials_
             const requiresSerialCheckbox = document.getElementById('requiresSerialTracking');
             if (requiresSerialCheckbox) {
                 requiresSerialCheckbox.addEventListener('change', updateSerialSyncLock);
+            }
+
+            // Dynamic Brand-Model Filtering
+            const brandSelect = document.getElementById('productBrandSelect');
+            const modelSelect = document.getElementById('productModelSelect');
+
+            function filterModelsByBrand() {
+                if (!brandSelect || !modelSelect) return;
+                const selectedBrand = brandSelect.value;
+                const currentModelVal = modelSelect.value;
+                let currentModelStillVisible = false;
+
+                Array.from(modelSelect.options).forEach((opt, idx) => {
+                    if (idx === 0) return;
+                    const modelBrand = opt.getAttribute('data-brand');
+                    if (!selectedBrand || modelBrand === selectedBrand) {
+                        opt.hidden = false;
+                        opt.disabled = false;
+                        if (opt.value === currentModelVal) currentModelStillVisible = true;
+                    } else {
+                        opt.hidden = true;
+                        opt.disabled = true;
+                    }
+                });
+
+                if (!currentModelStillVisible && currentModelVal) {
+                    modelSelect.value = '';
+                }
+            }
+
+            if (brandSelect && modelSelect) {
+                brandSelect.addEventListener('change', filterModelsByBrand);
+                modelSelect.addEventListener('change', function() {
+                    const opt = modelSelect.options[modelSelect.selectedIndex];
+                    if (opt && opt.getAttribute('data-brand') && !brandSelect.value) {
+                        brandSelect.value = opt.getAttribute('data-brand');
+                        filterModelsByBrand();
+                    }
+                });
+                filterModelsByBrand();
             }
 
             // Run on load

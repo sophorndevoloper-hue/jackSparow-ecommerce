@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Models\Backend\Supplier;
+use App\Models\Backend\Warehouse;
+use App\Models\Product\Product;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,6 +19,8 @@ class SerialNumber extends Model
     public const STATUS_ALLOCATED = 'ALLOCATED';
 
     public const STATUS_SHIPPED = 'SHIPPED';
+
+    public const STATUS_SOLD = 'sold';
 
     public const STATUS_RETURNED_RMA = 'RETURNED_RMA';
 
@@ -130,5 +135,40 @@ class SerialNumber extends Model
     public function scopeUnderWarranty(Builder $query): Builder
     {
         return $query->where('warranty_end_date', '>=', now()->toDateString());
+    }
+
+    /**
+     * Scope to sold units.
+     *
+     * @param  Builder<SerialNumber>  $query
+     */
+    public function scopeSold(Builder $query): Builder
+    {
+        return $query->whereIn('status', [self::STATUS_SOLD, 'SOLD', self::STATUS_SHIPPED]);
+    }
+
+    /**
+     * Mark this serialized unit as sold to an order item and activate 36-month warranty.
+     */
+    public function markAsSold(Order $order, OrderItem $orderItem): bool
+    {
+        $currentDate = now()->toDateString();
+        $warrantyEndDate = now()->copy()->addMonths(36)->toDateString();
+
+        $updated = $this->update([
+            'order_id' => $order->id,
+            'order_item_id' => $orderItem->id,
+            'status' => self::STATUS_SOLD,
+            'outbound_date' => $currentDate,
+            'warranty_start_date' => $currentDate,
+            'warranty_end_date' => $warrantyEndDate,
+            'notes' => "Scanned and verified for reserved item '{$orderItem->product_name}' on Order #{$order->order_number}. 36-month warranty active.",
+        ]);
+
+        if ($updated && $this->product) {
+            $this->product->syncTotalStock();
+        }
+
+        return $updated;
     }
 }

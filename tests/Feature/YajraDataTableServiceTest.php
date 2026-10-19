@@ -4,7 +4,6 @@ use App\DataTables\BrandDataTable;
 use App\DataTables\CategoryDataTable;
 use App\DataTables\CustomerDataTable;
 use App\DataTables\CustomerGroupDataTable;
-use App\DataTables\MakeDataTable;
 use App\DataTables\OrderDataTable;
 use App\DataTables\ProductDataTable;
 use App\DataTables\SerialNumberDataTable;
@@ -16,7 +15,6 @@ use App\DataTables\UserDataTable;
 use App\DataTables\WarehouseDataTable;
 use App\Models\Brand;
 use App\Models\Category;
-use App\Models\Make;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Permission;
@@ -58,12 +56,10 @@ it('instantiates yajra product data table service class with query and columns',
 it('returns processed eloquent datatable json with yajra service class', function () {
     $category = Category::factory()->create(['name' => 'CPUs']);
     $brand = Brand::factory()->create(['name' => 'AMD']);
-    $make = Make::factory()->create(['name' => 'Ryzen Pro']);
 
     $product = Product::factory()->create([
         'category_id' => $category->id,
         'brand_id' => $brand->id,
-        'make_id' => $make->id,
         'name' => 'AMD Ryzen 9 7950X',
         'sku' => 'SKU-7950X',
         'price' => 599.00,
@@ -86,7 +82,6 @@ it('returns processed eloquent datatable json with yajra service class', functio
     expect($json['recordsTotal'])->toBe(1);
     expect($json['data'][0]['name'])->toContain('AMD Ryzen 9 7950X');
     expect($json['data'][0]['category'])->toBe('CPUs');
-    expect($json['data'][0]['make'])->toBe('Ryzen Pro');
     expect($json['data'][0]['brand'])->toBe('AMD');
     expect($json['data'][0]['price'])->toBe('$599.00');
     expect($json['data'][0]['stock_quantity'])->toContain('In Stock (12)');
@@ -96,7 +91,6 @@ it('instantiates and provides columns and query for all yajra datatable service 
     $tables = [
         BrandDataTable::class,
         CategoryDataTable::class,
-        MakeDataTable::class,
         WarehouseDataTable::class,
         CustomerDataTable::class,
         CustomerGroupDataTable::class,

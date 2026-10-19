@@ -9,11 +9,12 @@ use App\Http\Requests\Backend\UpdateProductRequest;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\CustomerGroup;
-use App\Models\Make;
 use App\Models\Product;
+use App\Models\ProductModel;
 use App\Models\ProductPriceTier;
 use App\Models\SerialNumber;
 use App\Models\Warehouse;
+use App\Services\ProductImportService;
 use App\Services\SerialImportService;
 use App\Services\SerialTrackingService;
 use Illuminate\Contracts\View\View;
@@ -22,12 +23,14 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ProductController extends Controller
 {
     public function __construct(
         protected SerialTrackingService $serialTrackingService,
-        protected SerialImportService $serialImportService
+        protected SerialImportService $serialImportService,
+        protected ProductImportService $productImportService
     ) {}
 
     /**
@@ -39,7 +42,7 @@ class ProductController extends Controller
             return $dataTable->ajax();
         }
 
-        $query = Product::query()->with(['category', 'brand', 'make', 'images', 'primaryImage', 'priceTiers', 'warehouses']);
+        $query = Product::query()->with(['category', 'brand', 'model', 'images', 'primaryImage', 'priceTiers', 'warehouses']);
 
         if ($request->filled('category_id')) {
             $query->where('category_id', $request->input('category_id'));
@@ -49,8 +52,8 @@ class ProductController extends Controller
             $query->where('brand_id', $request->input('brand_id'));
         }
 
-        if ($request->filled('make_id')) {
-            $query->where('make_id', $request->input('make_id'));
+        if ($request->filled('model_id')) {
+            $query->where('model_id', $request->input('model_id'));
         }
 
         if ($request->filled('socket')) {
@@ -77,10 +80,11 @@ class ProductController extends Controller
 
         $categories = Category::orderBy('name')->get();
         $brands = Brand::orderBy('name')->get();
-        $makes = Make::orderBy('name')->get();
+        $models = ProductModel::orderBy('name')->get();
         $customerGroups = CustomerGroup::where('is_active', true)->orderBy('name')->get();
+        $warehouses = Warehouse::where('is_active', true)->orderBy('name')->get();
 
-        return view('backend.products.index', compact('products', 'categories', 'brands', 'makes', 'customerGroups', 'dataTable'));
+        return view('backend.products.index', compact('products', 'categories', 'brands', 'models', 'customerGroups', 'warehouses', 'dataTable'));
     }
 
     /**
@@ -90,11 +94,11 @@ class ProductController extends Controller
     {
         $categories = Category::orderBy('name')->get();
         $brands = Brand::orderBy('name')->get();
-        $makes = Make::where('is_active', true)->orderBy('name')->get();
+        $models = ProductModel::active()->with('brand')->orderBy('sort_order')->orderBy('name')->get();
         $customerGroups = CustomerGroup::where('is_active', true)->orderBy('name')->get();
         $warehouses = Warehouse::where('is_active', true)->orderBy('name')->get();
 
-        return view('backend.products.create', compact('categories', 'brands', 'makes', 'customerGroups', 'warehouses'));
+        return view('backend.products.create', compact('categories', 'brands', 'models', 'customerGroups', 'warehouses'));
     }
 
     /**
@@ -127,6 +131,19 @@ class ProductController extends Controller
 
         return DB::transaction(function () use ($data, $request) {
             $product = Product::create($data);
+
+            if ($product->requires_serial_tracking) {
+                $product->update(['stock_quantity' => 0]);
+            } else {
+                $initialStock = (int) ($data['stock_quantity'] ?? 0);
+                if ($initialStock > 0) {
+                    $defaultWarehouse = Warehouse::where('is_default', true)->first() ?? Warehouse::first();
+                    if ($defaultWarehouse) {
+                        $defaultWarehouse->setProductStock($product, $initialStock);
+                    }
+                }
+                $product->syncTotalStock();
+            }
 
             // Save B2B pricing tiers if provided
             $this->syncPriceTiers($product, $request);
@@ -174,13 +191,13 @@ class ProductController extends Controller
     {
         $product->syncTotalStock();
 
-        $product->load(['images', 'priceTiers.customerGroup', 'warehouses', 'serialNumbers' => function ($q) {
+        $product->load(['images', 'priceTiers.customerGroup', 'warehouses', 'model', 'serialNumbers' => function ($q) {
             $q->latest()->limit(50);
         }, 'compatibilities.compatibleProduct']);
 
         $categories = Category::orderBy('name')->get();
         $brands = Brand::orderBy('name')->get();
-        $makes = Make::orderBy('name')->get();
+        $models = ProductModel::active()->with('brand')->orderBy('sort_order')->orderBy('name')->get();
         $customerGroups = CustomerGroup::where('is_active', true)->orderBy('name')->get();
         $warehouses = Warehouse::where('is_active', true)->orderBy('name')->get();
         $allProducts = Product::where('id', '!=', $product->id)->orderBy('name')->get(['id', 'name', 'sku', 'socket']);
@@ -192,7 +209,7 @@ class ProductController extends Controller
             'product',
             'categories',
             'brands',
-            'makes',
+            'models',
             'customerGroups',
             'warehouses',
             'allProducts',
@@ -242,8 +259,17 @@ class ProductController extends Controller
                 ->count();
         }
 
-        return DB::transaction(function () use ($data, $request, $product) {
+        return DB::transaction(function () use ($data, $request, $product, $isSerialTracked) {
             $product->update($data);
+
+            if (! $isSerialTracked && isset($data['stock_quantity'])) {
+                $newStock = (int) $data['stock_quantity'];
+                $defaultWarehouse = Warehouse::where('is_default', true)->first() ?? Warehouse::first();
+                if ($defaultWarehouse) {
+                    $defaultWarehouse->setProductStock($product, $newStock);
+                }
+            }
+            $product->syncTotalStock();
 
             // Sync B2B Price Tiers
             $this->syncPriceTiers($product, $request);
@@ -291,12 +317,56 @@ class ProductController extends Controller
 
     /**
      * Remove the specified product from storage.
+     * Protection rule: Can only delete when stock is 0 and status is Draft (is_active is false).
      */
-    public function destroy(Product $product): RedirectResponse
+    public function destroy(Request $request, Product $product): RedirectResponse|JsonResponse
     {
+        $product->syncTotalStock();
+
+        if (! $product->canBeDeleted()) {
+            $message = $product->getDeletionBlockReason();
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $message,
+                ], 422);
+            }
+
+            return redirect()
+                ->route('admin.products.index')
+                ->with('error', $message);
+        }
+
+        // Prevent deletion if product is referenced in customer orders
+        if ($product->orderItems()->exists()) {
+            $message = "Cannot delete product '{$product->name}' because it is linked to past order records. Please keep it in Draft status instead.";
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $message,
+                ], 422);
+            }
+
+            return redirect()
+                ->route('admin.products.index')
+                ->with('error', $message);
+        }
+
+        $name = $product->name;
         $product->delete();
 
-        return redirect()->route('admin.products.index')->with('success', 'Product removed successfully.');
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => "Draft product '{$name}' was deleted successfully.",
+            ]);
+        }
+
+        return redirect()
+            ->route('admin.products.index')
+            ->with('success', "Draft product '{$name}' was deleted successfully.");
     }
 
     /**
@@ -435,5 +505,92 @@ class ProductController extends Controller
                 ]);
             }
         }
+    }
+
+    /**
+     * Import hardware products in bulk from an uploaded file (CSV, Excel, JSON, TXT).
+     */
+    public function import(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'max:10240', 'mimes:xlsx,xls'],
+            'default_category_id' => ['nullable', 'exists:categories,id'],
+            'default_brand_id' => ['nullable', 'exists:brands,id'],
+            'default_warehouse_id' => ['nullable', 'exists:warehouses,id'],
+            'update_existing' => ['nullable', 'boolean'],
+        ]);
+
+        try {
+            $parsedItems = $this->productImportService->parseFile($request->file('file'));
+
+            if (empty($parsedItems)) {
+                return back()
+                    ->withInput()
+                    ->with('error', 'The uploaded file does not contain any valid product rows.');
+            }
+
+            $options = [
+                'default_category_id' => $request->input('default_category_id'),
+                'default_brand_id' => $request->input('default_brand_id'),
+                'default_warehouse_id' => $request->input('default_warehouse_id'),
+                'update_existing' => $request->boolean('update_existing', true),
+            ];
+
+            $result = $this->productImportService->importItems($parsedItems, $options);
+
+            $msg = "Bulk product import complete! Added: {$result['imported']} new products, Updated: {$result['updated']} existing products.";
+            if ($result['skipped'] > 0) {
+                $msg .= " Skipped: {$result['skipped']}.";
+            }
+
+            if (! empty($result['errors'])) {
+                return redirect()->route('admin.products.index')
+                    ->with('success', $msg)
+                    ->with('import_errors', $result['errors']);
+            }
+
+            return redirect()->route('admin.products.index')
+                ->with('success', $msg);
+
+        } catch (\Throwable $e) {
+            return back()
+                ->withInput()
+                ->with('error', 'Import failed: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * AJAX endpoint to parse uploaded product file and return preview rows.
+     */
+    public function importPreview(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'max:10240'],
+        ]);
+
+        try {
+            $items = $this->productImportService->parseFile($request->file('file'));
+
+            return response()->json([
+                'success' => true,
+                'total' => count($items),
+                'preview' => array_slice($items, 0, 10),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * Download sample product import template file (.csv or .xlsx).
+     */
+    public function downloadImportTemplate(Request $request, string $format = 'xlsx'): StreamedResponse
+    {
+        $fmt = strtolower($request->query('format', $format));
+
+        return $this->productImportService->downloadTemplate($fmt);
     }
 }

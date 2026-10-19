@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\CustomerGroup;
-use App\Models\Make;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -411,7 +410,6 @@ class ComputerPartSeeder extends Seeder
                 [
                     'category_id' => $cat->id,
                     'brand_id' => $brand->id,
-                    'make_id' => Make::where('slug', $data['brand_slug'])->value('id'),
                     'name' => $data['name'],
                     'slug' => $data['slug'],
                     'mpn' => $data['mpn'] ?? null,

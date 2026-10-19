@@ -80,7 +80,7 @@
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label fw-bold small">Manufacturer / Brand</label>
-                                        <select name="brand_id" class="form-select">
+                                        <select name="brand_id" id="productBrandSelect" class="form-select">
                                             <option value="">Select Brand (Optional)</option>
                                             @foreach($brands as $b)
                                                 <option value="{{ $b->id }}" {{ old('brand_id') == $b->id ? 'selected' : '' }}>
@@ -90,15 +90,16 @@
                                         </select>
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label fw-bold small">Hardware Make / OEM</label>
-                                        <select name="make_id" class="form-select">
-                                            <option value="">Select Make (Optional)</option>
-                                            @foreach($makes as $m)
-                                                <option value="{{ $m->id }}" {{ old('make_id') == $m->id ? 'selected' : '' }}>
-                                                    {{ $m->name }}
+                                        <label class="form-label fw-bold small">Hardware Model / Series</label>
+                                        <select name="model_id" id="productModelSelect" class="form-select">
+                                            <option value="">Select Model (Optional)</option>
+                                            @foreach($models as $m)
+                                                <option value="{{ $m->id }}" data-brand="{{ $m->brand_id }}" {{ old('model_id') == $m->id ? 'selected' : '' }}>
+                                                    {{ $m->name }} ({{ $m->brand?->name }})
                                                 </option>
                                             @endforeach
                                         </select>
+                                        <div class="form-text small" style="font-size: 11px;">Filtered automatically when Brand is selected.</div>
                                     </div>
                                 </div>
 
@@ -433,7 +434,7 @@
                             <div class="panel p-4 mb-3">
                                 <h5 class="mb-3"><i class="bi bi-qr-code text-primary me-2"></i>Hardware Serialization Settings</h5>
                                 <div class="form-check form-switch mb-3 p-3 bg-light rounded border">
-                                    <input class="form-check-input" type="checkbox" name="requires_serial_tracking" value="1" id="requiresSerialTracking" checked>
+                                    <input class="form-check-input" type="checkbox" name="requires_serial_tracking" value="1" id="requiresSerialTracking" {{ old('requires_serial_tracking') ? 'checked' : '' }}>
                                     <label class="form-check-label fw-bold" for="requiresSerialTracking">
                                         Enable Individual Serial Number Tracking (S/N)
                                     </label>
@@ -464,7 +465,10 @@
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold small">Initial Stock Quantity *</label>
-                                        <input type="number" name="stock_quantity" value="{{ old('stock_quantity', 25) }}" required class="form-control">
+                                        <input type="number" name="stock_quantity" id="stockQuantityInput" value="{{ old('stock_quantity', 0) }}" required class="form-control">
+                                        <div id="serialStockNotice" class="text-muted small mt-1" style="display: none;">
+                                            <i class="bi bi-info-circle text-primary me-1"></i>Stock for serialized products is determined by registered serial numbers.
+                                        </div>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold small">Low Stock Alert Threshold *</label>
@@ -714,10 +718,75 @@
             });
         @endif
 
+        // Update stock input state based on serial tracking switch
+        const serialCheckbox = document.getElementById('requiresSerialTracking');
+        const stockInput = document.getElementById('stockQuantityInput');
+        const serialNotice = document.getElementById('serialStockNotice');
+
+        function updateStockFieldState() {
+            if (serialCheckbox && stockInput) {
+                if (serialCheckbox.checked) {
+                    stockInput.value = 0;
+                    stockInput.readOnly = true;
+                    stockInput.classList.add('bg-light');
+                    if (serialNotice) serialNotice.style.display = 'block';
+                } else {
+                    stockInput.readOnly = false;
+                    stockInput.classList.remove('bg-light');
+                    if (serialNotice) serialNotice.style.display = 'none';
+                }
+            }
+        }
+
+        if (serialCheckbox) {
+            serialCheckbox.addEventListener('change', updateStockFieldState);
+        }
+
+        // Dynamic Brand-Model Filtering
+        const brandSelect = document.getElementById('productBrandSelect');
+        const modelSelect = document.getElementById('productModelSelect');
+
+        function filterModelsByBrand() {
+            if (!brandSelect || !modelSelect) return;
+            const selectedBrand = brandSelect.value;
+            const currentModelVal = modelSelect.value;
+            let currentModelStillVisible = false;
+
+            Array.from(modelSelect.options).forEach((opt, idx) => {
+                if (idx === 0) return;
+                const modelBrand = opt.getAttribute('data-brand');
+                if (!selectedBrand || modelBrand === selectedBrand) {
+                    opt.hidden = false;
+                    opt.disabled = false;
+                    if (opt.value === currentModelVal) currentModelStillVisible = true;
+                } else {
+                    opt.hidden = true;
+                    opt.disabled = true;
+                }
+            });
+
+            if (!currentModelStillVisible && currentModelVal) {
+                modelSelect.value = '';
+            }
+        }
+
+        if (brandSelect && modelSelect) {
+            brandSelect.addEventListener('change', filterModelsByBrand);
+            modelSelect.addEventListener('change', function() {
+                const opt = modelSelect.options[modelSelect.selectedIndex];
+                if (opt && opt.getAttribute('data-brand') && !brandSelect.value) {
+                    brandSelect.value = opt.getAttribute('data-brand');
+                    filterModelsByBrand();
+                }
+            });
+        }
+
         // Initialize floor price calculation & step navigation on load
         document.addEventListener('DOMContentLoaded', function () {
             calculateFloorPrice();
             updateStepNavigation('#general');
+            updateStockFieldState();
+            filterModelsByBrand();
         });
     </script>
 </x-app-layout>

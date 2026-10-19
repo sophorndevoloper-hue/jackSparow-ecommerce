@@ -7,22 +7,31 @@
     <div class="w-full max-w-xl">
         <!-- Brand Header Card -->
         <div class="text-center mb-8">
-            <a href="{{ route('home') }}" class="inline-flex flex-col items-center gap-2 group">
-                <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-500/30 group-hover:scale-105 transition transform">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
-                </div>
-                <div class="flex items-center gap-1.5 text-2xl font-black text-gray-900 tracking-tight">
-                    JackSparow <span class="text-blue-600">TECH</span>
-                </div>
+            <a href="{{ route('home') }}" class="inline-flex items-center justify-center group mb-3" aria-label="JackSparrow B2B Computer Parts">
+                <img src="{{ asset('assets/images/brand/logo/jacksparrow-logo.png') }}" 
+                     alt="JackSparrow - B2B Computer Parts" 
+                     class="h-12 sm:h-14 w-auto object-contain transition duration-200 group-hover:scale-105">
             </a>
-            <h1 class="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight mt-3">Create Customer Account</h1>
+            <h1 class="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">Create Customer Account</h1>
             <p class="text-xs sm:text-sm text-gray-500 mt-1.5">
-                Join JackSparow TECH for component stock notifications and VIP wholesale tier status.
+                Join JackSparrow for component stock notifications and VIP wholesale tier status.
             </p>
         </div>
 
         <!-- Form Card -->
         <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-gray-100 p-6 sm:p-10">
+            @if((session()->has('url.intended') && str_contains((string) session()->get('url.intended'), 'checkout')) || request()->has('from_checkout'))
+                <div class="mb-6 rounded-2xl bg-amber-50 border border-amber-200/80 p-4 text-xs font-medium text-amber-900 flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                    </div>
+                    <div>
+                        <div class="font-bold text-amber-950">Create Account to Complete Checkout</div>
+                        <div class="text-[11px] text-amber-800 mt-0.5">Create your customer account to place your order. You will be redirected right back to checkout after signing up!</div>
+                    </div>
+                </div>
+            @endif
+
             @if($errors->any())
                 <div class="mb-6 rounded-2xl bg-rose-50 border border-rose-200 p-4 text-xs text-rose-800">
                     <div class="font-bold mb-1 flex items-center gap-1.5">
@@ -100,51 +109,12 @@
                     </div>
                 </div>
 
-                <!-- Contact Info Grid -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label for="phone" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
-                            Phone Number
-                        </label>
-                        <input id="phone" 
-                               type="text" 
-                               name="phone" 
-                               value="{{ old('phone') }}"
-                               placeholder="+1 (555) 000-0000"
-                               class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-sm text-gray-900 placeholder-gray-400 bg-white transition outline-none">
-                    </div>
-
-                    <div>
-                        <label for="city" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
-                            City / Town
-                        </label>
-                        <input id="city" 
-                               type="text" 
-                               name="city" 
-                               value="{{ old('city') }}"
-                               placeholder="e.g. San Jose, CA"
-                               class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-sm text-gray-900 placeholder-gray-400 bg-white transition outline-none">
-                    </div>
-                </div>
-
-                <!-- Shipping Address -->
-                <div>
-                    <label for="address" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
-                        Default Shipping Address
-                    </label>
-                    <input id="address" 
-                           type="text" 
-                           name="address" 
-                           value="{{ old('address') }}"
-                           placeholder="Street address, apartment, suite..."
-                           class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-sm text-gray-900 placeholder-gray-400 bg-white transition outline-none">
-                </div>
-
-                <!-- Tier Benefit Callout -->
+                <!-- Profile Notice Callout -->
                 <div class="p-3.5 bg-blue-50/70 border border-blue-100 rounded-2xl flex items-start gap-2.5 text-xs text-blue-800">
                     <svg class="w-4 h-4 text-blue-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    <span>All new accounts start as <strong>Simple Customer</strong> and automatically upgrade to <strong>⭐ Special VIP Tier</strong> after 3 completed orders!</span>
+                    <span>Create your customer account to start shopping. You can add your phone number and shipping address anytime in your Profile.</span>
                 </div>
+
 
                 <!-- Submit Button -->
                 <div class="pt-2">

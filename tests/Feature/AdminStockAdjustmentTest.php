@@ -500,3 +500,207 @@ it('supports adding newly discovered serials while removing uncounted serials du
     expect($s2->fresh()->status)->toBe(SerialNumber::STATUS_OTHER);
     expect(SerialNumber::where('serial_number', 'SN-NEW-99')->where('status', SerialNumber::STATUS_IN_STOCK)->exists())->toBeTrue();
 });
+
+it('allows adjusting stock for non-serialized untracked products by quantity directly without serial numbers', function () {
+    $admin = User::factory()->create(['is_approved' => true]);
+    $admin->assignRole(Role::findByName('admin', 'backend'));
+
+    $warehouse = Warehouse::create(['name' => 'Untracked Hub', 'code' => 'WH-UNT1']);
+    $category = Category::factory()->create();
+    $product = Product::factory()->create([
+        'category_id' => $category->id,
+        'stock_quantity' => 5,
+        'requires_serial_tracking' => false,
+    ]);
+    $warehouse->products()->attach($product->id, ['quantity' => 5]);
+
+    // 1. Addition of 10 untracked units
+    $response = $this->actingAs($admin, 'backend')->post(route('admin.stock.adjustments.store'), [
+        'warehouse_id' => $warehouse->id,
+        'type' => 'addition',
+        'reason' => 'received',
+        'products' => [
+            [
+                'product_id' => $product->id,
+                'quantity' => 10,
+                'serials' => '',
+            ],
+        ],
+    ]);
+
+    $response->assertRedirect(route('admin.stock.adjustments.index'));
+    $response->assertSessionHas('success');
+    expect($warehouse->getProductStock($product))->toBe(15);
+    expect($product->fresh()->stock_quantity)->toBe(15);
+
+    // 2. Subtraction of 3 untracked units
+    $this->actingAs($admin, 'backend')->post(route('admin.stock.adjustments.store'), [
+        'warehouse_id' => $warehouse->id,
+        'type' => 'subtraction',
+        'reason' => 'damaged',
+        'products' => [
+            [
+                'product_id' => $product->id,
+                'quantity' => 3,
+                'serials' => '',
+            ],
+        ],
+    ]);
+
+    expect($warehouse->getProductStock($product))->toBe(12);
+    expect($product->fresh()->stock_quantity)->toBe(12);
+
+    // 3. Correction to 20 untracked units
+    $this->actingAs($admin, 'backend')->post(route('admin.stock.adjustments.store'), [
+        'warehouse_id' => $warehouse->id,
+        'type' => 'correction',
+        'reason' => 'physical_count',
+        'products' => [
+            [
+                'product_id' => $product->id,
+                'quantity' => 20,
+                'serials' => '',
+            ],
+        ],
+    ]);
+
+    expect($warehouse->getProductStock($product))->toBe(20);
+    expect($product->fresh()->stock_quantity)->toBe(20);
+});
+
+it('requires manufacturer serial numbers and rejects adding stock for serialized products without serial numbers', function () {
+    $admin = User::factory()->create(['is_approved' => true]);
+    $admin->assignRole(Role::findByName('admin', 'backend'));
+
+    $warehouse = Warehouse::create(['name' => 'Company SN Hub', 'code' => 'WH-CSN1']);
+    $category = Category::factory()->create();
+    $product = Product::factory()->create([
+        'name' => 'GeForce RTX 4080 Super',
+        'category_id' => $category->id,
+        'sku' => 'RTX-4080-SUPER',
+        'stock_quantity' => 0,
+        'requires_serial_tracking' => true,
+    ]);
+
+    // 1. Attempting addition of units without entering company serials must be rejected
+    $failResponse = $this->actingAs($admin, 'backend')->post(route('admin.stock.adjustments.store'), [
+        'warehouse_id' => $warehouse->id,
+        'type' => 'addition',
+        'reason' => 'received',
+        'products' => [
+            [
+                'product_id' => $product->id,
+                'quantity' => 2,
+                'serials' => '',
+            ],
+        ],
+    ]);
+
+    $failResponse->assertSessionHas('error');
+    expect($warehouse->getProductStock($product))->toBe(0);
+    expect($product->fresh()->stock_quantity)->toBe(0);
+
+    // 2. Addition with genuine manufacturer serial numbers succeeds
+    $manufacturerSerials = "ASUS-RTX4080-SN9821\nASUS-RTX4080-SN9822";
+    $successResponse = $this->actingAs($admin, 'backend')->post(route('admin.stock.adjustments.store'), [
+        'warehouse_id' => $warehouse->id,
+        'type' => 'addition',
+        'reason' => 'received',
+        'products' => [
+            [
+                'product_id' => $product->id,
+                'quantity' => 2,
+                'serials' => $manufacturerSerials,
+            ],
+        ],
+    ]);
+
+    $successResponse->assertRedirect(route('admin.stock.adjustments.index'));
+    $successResponse->assertSessionHas('success');
+
+    expect($warehouse->getProductStock($product))->toBe(2);
+    expect($product->fresh()->stock_quantity)->toBe(2);
+
+    $createdSerials = SerialNumber::where('product_id', $product->id)
+        ->where('warehouse_id', $warehouse->id)
+        ->where('status', SerialNumber::STATUS_IN_STOCK)
+        ->pluck('serial_number')
+        ->toArray();
+
+    expect($createdSerials)->toEqualCanonicalizing(['ASUS-RTX4080-SN9821', 'ASUS-RTX4080-SN9822']);
+});
+
+it('requires selecting specific serial numbers when subtracting stock for serialized products', function () {
+    $admin = User::factory()->create(['is_approved' => true]);
+    $admin->assignRole(Role::findByName('admin', 'backend'));
+
+    $warehouse = Warehouse::create(['name' => 'Deduct Hub', 'code' => 'WH-DED1']);
+    $category = Category::factory()->create();
+    $product = Product::factory()->create([
+        'name' => 'Intel Core i9-14900K',
+        'category_id' => $category->id,
+        'stock_quantity' => 3,
+        'requires_serial_tracking' => true,
+    ]);
+    $warehouse->products()->attach($product->id, ['quantity' => 3]);
+
+    $s1 = SerialNumber::create([
+        'product_id' => $product->id,
+        'warehouse_id' => $warehouse->id,
+        'serial_number' => 'INTEL-I9-SN01',
+        'status' => SerialNumber::STATUS_IN_STOCK,
+    ]);
+    $s2 = SerialNumber::create([
+        'product_id' => $product->id,
+        'warehouse_id' => $warehouse->id,
+        'serial_number' => 'INTEL-I9-SN02',
+        'status' => SerialNumber::STATUS_IN_STOCK,
+    ]);
+    $s3 = SerialNumber::create([
+        'product_id' => $product->id,
+        'warehouse_id' => $warehouse->id,
+        'serial_number' => 'INTEL-I9-SN03',
+        'status' => SerialNumber::STATUS_IN_STOCK,
+    ]);
+
+    // 1. Attempting subtraction without selecting serial numbers must fail
+    $failResponse = $this->actingAs($admin, 'backend')->post(route('admin.stock.adjustments.store'), [
+        'warehouse_id' => $warehouse->id,
+        'type' => 'subtraction',
+        'reason' => 'damaged',
+        'products' => [
+            [
+                'product_id' => $product->id,
+                'quantity' => 2,
+                'serials' => '',
+            ],
+        ],
+    ]);
+
+    $failResponse->assertSessionHas('error');
+    expect($warehouse->getProductStock($product))->toBe(3);
+
+    // 2. Specifying exact serial numbers succeeds
+    $successResponse = $this->actingAs($admin, 'backend')->post(route('admin.stock.adjustments.store'), [
+        'warehouse_id' => $warehouse->id,
+        'type' => 'subtraction',
+        'reason' => 'damaged',
+        'products' => [
+            [
+                'product_id' => $product->id,
+                'quantity' => 2,
+                'serials' => "INTEL-I9-SN01\nINTEL-I9-SN02",
+            ],
+        ],
+    ]);
+
+    $successResponse->assertRedirect(route('admin.stock.adjustments.index'));
+    $successResponse->assertSessionHas('success');
+
+    expect($warehouse->getProductStock($product))->toBe(1);
+    expect($product->fresh()->stock_quantity)->toBe(1);
+
+    expect($s1->fresh()->status)->toBe(SerialNumber::STATUS_DEFECTIVE_SCRAP);
+    expect($s2->fresh()->status)->toBe(SerialNumber::STATUS_DEFECTIVE_SCRAP);
+    expect($s3->fresh()->status)->toBe(SerialNumber::STATUS_IN_STOCK);
+});
