@@ -683,3 +683,37 @@ it('can clear the entire cart via JSON', function () {
         'is_empty' => true,
     ]);
 });
+
+it('renders authorized brand logos section on the homepage next to flash deals', function () {
+    $brandWithLogo = Brand::factory()->create([
+        'name' => 'Corsair Gaming',
+        'slug' => 'corsair-gaming',
+        'logo' => 'https://example.com/corsair.png',
+        'is_active' => true,
+    ]);
+
+    $brandWithoutLogo = Brand::factory()->create([
+        'name' => 'Gigabyte Tech',
+        'slug' => 'gigabyte-tech',
+        'logo' => null,
+        'is_active' => true,
+    ]);
+
+    $response = $this->get('/');
+
+    $response->assertStatus(200);
+    $response->assertSee('Authorized Component Brands');
+    $response->assertSee('Corsair Gaming');
+    $response->assertSee('Gigabyte Tech');
+    $response->assertSee('https://example.com/corsair.png');
+    $response->assertSee(route('shop', ['brand' => $brandWithLogo->slug]));
+    $response->assertSee(route('shop', ['brand' => $brandWithoutLogo->slug]));
+
+    $content = $response->getContent();
+    $posDealsSection = strpos($content, 'Flash Deals');
+    $posBrandSection = strpos($content, 'Authorized Component Brands');
+
+    if ($posDealsSection !== false) {
+        expect($posBrandSection)->toBeGreaterThan($posDealsSection);
+    }
+});

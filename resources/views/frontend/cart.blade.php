@@ -17,9 +17,9 @@
                     <span class="text-slate-600">/</span>
                     <span class="text-blue-400">Shopping Cart</span>
                 </nav>
-                <h1 class="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-3">
+                <h1 class="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tight flex flex-wrap items-center gap-2 sm:gap-3">
                     <span>Your Shopping Cart</span>
-                    <span class="text-xs px-2.5 py-1 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/30 font-semibold inline-flex items-center gap-1.5 shadow-xs">
+                    <span class="text-[11px] sm:text-xs px-2.5 py-0.5 sm:py-1 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/30 font-semibold inline-flex items-center gap-1.5 shadow-xs">
                         <i class="bi bi-shield-check text-emerald-400"></i> Official Hardware Warranty
                     </span>
                 </h1>

@@ -80,8 +80,10 @@ class HomeController extends Controller
         $topBrands = Brand::query()
             ->active()
             ->withCount('products')
+            ->orderByRaw('CASE WHEN logo IS NULL THEN 1 ELSE 0 END')
             ->orderByDesc('products_count')
-            ->take(12)
+            ->orderBy('name')
+            ->take(18)
             ->get();
 
         $userFavoriteIds = Favorite::getFavoriteIds();

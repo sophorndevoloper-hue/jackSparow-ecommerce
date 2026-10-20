@@ -137,21 +137,21 @@ $footerMenus = \App\Models\StorefrontMenu::getTree('footer');
     @if($announcementEnabled || $topMenus->count() > 0 || $contactPhone || Route::has('admin.dashboard'))
     <div class="storefront-topbar bg-slate-950 text-slate-300 text-xs py-2 px-4 border-b border-slate-800"
         style="background-color: #020617; color: #cbd5e1;">
-        <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-3">
+        <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-2 sm:gap-3">
             <!-- Dynamic Top Menus (About Us, Contact, Tracking...) & Announcement -->
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
                 @if($announcementEnabled && $announcementText)
-                <span class="inline-flex items-center gap-1.5 text-emerald-400 font-semibold tracking-wide">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span class="inline-flex items-center gap-1.5 text-emerald-400 font-semibold tracking-wide text-[11px] sm:text-xs">
+                    <span class="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                     {{ $announcementText }}
                 </span>
                 @if($topMenus->count() > 0)
-                <span class="hidden md:inline text-slate-700">|</span>
+                <span class="hidden lg:inline text-slate-700">|</span>
                 @endif
                 @endif
 
                 @if($topMenus->count() > 0)
-                <nav class="flex items-center gap-3" aria-label="Top utility navigation">
+                <nav class="hidden lg:flex items-center gap-3" aria-label="Top utility navigation">
                     @foreach($topMenus as $tMenu)
                     <a href="{{ $tMenu->resolved_url }}" target="{{ $tMenu->target }}"
                         class="hover:text-blue-400 transition flex items-center gap-1.5 text-xs text-slate-300 font-medium">
@@ -174,7 +174,7 @@ $footerMenus = \App\Models\StorefrontMenu::getTree('footer');
             </div>
 
             <!-- Support & Admin Portal -->
-            <div class="flex items-center gap-4 text-slate-300">
+            <div class="flex items-center gap-3 sm:gap-4 text-slate-300 text-[11px] sm:text-xs">
                 @if($contactPhone)
                 <span class="hidden sm:inline text-slate-400">
                     <i class="bi bi-telephone-fill text-slate-500 me-1"></i>{{ $contactPhone }}
@@ -196,13 +196,13 @@ $footerMenus = \App\Models\StorefrontMenu::getTree('footer');
 
     <!-- ================= 2. MAIN HEADER & BRAND ================= -->
     <header class="bg-white/95 backdrop-blur-md border-b border-gray-200 sticky top-0 z-40 shadow-xs">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-20 gap-4">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16 sm:h-20 gap-2 sm:gap-4">
                 <!-- Brand Logo Mark -->
                 <a href="{{ route('home') }}" class="flex items-center shrink-0 group py-1"
                     aria-label="{{ $siteName }}">
                     <img src="{{ asset('assets/images/brand/logo/jacksparrow-logo.png') }}" alt="{{ $siteName }}"
-                        class="h-11 sm:h-12 w-auto object-contain transition duration-200 group-hover:opacity-90">
+                        class="h-8 sm:h-11 md:h-12 w-auto max-w-[130px] sm:max-w-none object-contain transition duration-200 group-hover:opacity-90">
                 </a>
 
                 <!-- Quick Product Search Bar -->
@@ -225,15 +225,15 @@ $footerMenus = \App\Models\StorefrontMenu::getTree('footer');
                 </form>
 
                 <!-- Actions: User Profile & Shopping Cart -->
-                <div class="flex items-center gap-3 shrink-0">
+                <div class="flex items-center gap-1.5 sm:gap-3 shrink-0">
                     <!-- User Account Dropdown -->
                     @if(auth('frontend')->check())
                     @php $customerUser = auth('frontend')->user(); @endphp
                     <div class="relative" x-data="{ open: false }" @click.away="open = false">
                         <button @click="open = !open" type="button"
-                            class="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition p-1.5 rounded-2xl hover:bg-gray-100">
+                            class="flex items-center gap-1.5 sm:gap-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition p-1 sm:p-1.5 rounded-2xl hover:bg-gray-100">
                             <span
-                                class="w-8 h-8 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-xs shadow-xs">
+                                class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-xs shadow-xs">
                                 {{ strtoupper(substr($customerUser->name, 0, 1)) }}
                             </span>
                             <span class="hidden xl:inline text-left">
@@ -242,7 +242,7 @@ $footerMenus = \App\Models\StorefrontMenu::getTree('footer');
                                 <span class="block font-bold -mt-0.5 text-xs text-gray-900 truncate max-w-28">{{
                                     $customerUser->name }}</span>
                             </span>
-                            <i class="bi bi-chevron-down text-gray-400 text-xs"></i>
+                            <i class="bi bi-chevron-down text-gray-400 text-xs hidden sm:inline"></i>
                         </button>
 
                         <div x-show="open" x-transition
@@ -278,11 +278,12 @@ $footerMenus = \App\Models\StorefrontMenu::getTree('footer');
                         </div>
                     </div>
                     @else
-                    <div class="flex items-center gap-1.5">
+                    <div class="flex items-center gap-1 sm:gap-1.5">
                         <a href="{{ route('login') }}"
-                            class="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-gray-700 hover:text-blue-600 transition px-3 py-2 rounded-xl hover:bg-gray-100">
+                            class="inline-flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm font-bold text-gray-700 hover:text-blue-600 transition px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl hover:bg-gray-100"
+                            title="Sign In">
                             <i class="bi bi-person-circle fs-6"></i>
-                            <span>Sign In</span>
+                            <span class="hidden sm:inline">Sign In</span>
                         </a>
                         <a href="{{ route('register') }}"
                             class="hidden sm:inline-flex items-center text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 transition px-3.5 py-2 rounded-xl">
@@ -296,11 +297,11 @@ $footerMenus = \App\Models\StorefrontMenu::getTree('footer');
                     $favoriteCount = \App\Models\Favorite::getCount();
                     @endphp
                     <a href="{{ route('favorites.index') }}" id="storefront-favorite-button"
-                        class="relative inline-flex items-center justify-center p-2.5 rounded-2xl bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 transition shadow-xs"
+                        class="relative inline-flex items-center justify-center p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 transition shadow-xs"
                         title="View Saved Favorites" aria-label="View Saved Favorites">
-                        <i class="bi bi-heart fs-5"></i>
+                        <i class="bi bi-heart text-sm sm:text-base"></i>
                         <span id="storefront-favorite-badge"
-                            class="absolute -top-1 -right-1 bg-rose-600 text-white font-black text-[11px] min-w-[20px] h-5 px-1 rounded-full flex items-center justify-center shadow-xs transition-all duration-300 transform {{ $favoriteCount > 0 ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none' }}">
+                            class="absolute -top-1 -right-1 bg-rose-600 text-white font-black text-[10px] sm:text-[11px] min-w-[18px] sm:min-w-[20px] h-4.5 sm:h-5 px-1 rounded-full flex items-center justify-center shadow-xs transition-all duration-300 transform {{ $favoriteCount > 0 ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none' }}">
                             <span id="storefront-favorite-count">{{ $favoriteCount }}</span>
                         </span>
                     </a>
@@ -311,20 +312,20 @@ $footerMenus = \App\Models\StorefrontMenu::getTree('footer');
                     $cartCount = array_sum(array_column($cartItems, 'quantity'));
                     @endphp
                     <a href="{{ route('cart.index') }}" id="storefront-cart-button"
-                        class="relative inline-flex items-center justify-center p-2.5 rounded-2xl bg-blue-50 text-blue-700 hover:bg-blue-100 hover:text-blue-800 transition shadow-xs"
+                        class="relative inline-flex items-center justify-center p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-blue-50 text-blue-700 hover:bg-blue-100 hover:text-blue-800 transition shadow-xs"
                         title="View Shopping Cart" aria-label="View Shopping Cart">
-                        <i class="bi bi-cart3 fs-5"></i>
+                        <i class="bi bi-cart3 text-sm sm:text-base"></i>
                         <span id="storefront-cart-badge"
-                            class="absolute -top-1 -right-1 bg-blue-600 text-white font-black text-[11px] min-w-[20px] h-5 px-1 rounded-full flex items-center justify-center shadow-xs transition-all duration-300 transform {{ $cartCount > 0 ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none' }}">
+                            class="absolute -top-1 -right-1 bg-blue-600 text-white font-black text-[10px] sm:text-[11px] min-w-[18px] sm:min-w-[20px] h-4.5 sm:h-5 px-1 rounded-full flex items-center justify-center shadow-xs transition-all duration-300 transform {{ $cartCount > 0 ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none' }}">
                             <span id="storefront-cart-count">{{ $cartCount }}</span>
                         </span>
                     </a>
 
                     <!-- Mobile Menu Hamburger Button -->
                     <button type="button" @click="mobileMenuOpen = !mobileMenuOpen"
-                        class="mobile-nav-toggle md:hidden p-2 rounded-xl text-gray-700 hover:bg-gray-100 focus:outline-hidden"
+                        class="mobile-nav-toggle md:hidden p-1.5 sm:p-2 rounded-xl text-gray-700 hover:bg-gray-100 focus:outline-hidden"
                         aria-label="Toggle navigation menu">
-                        <i class="bi" :class="mobileMenuOpen ? 'bi-x-lg fs-5' : 'bi-list fs-4'"></i>
+                        <i class="bi" :class="mobileMenuOpen ? 'bi-x-lg text-lg' : 'bi-list text-xl'"></i>
                     </button>
                 </div>
             </div>

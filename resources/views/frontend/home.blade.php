@@ -359,6 +359,21 @@
             </div>
         </div>
 
+        @if($topBrands->whereNotNull('logo')->isNotEmpty())
+            <!-- Quick Brand Logos Strip next to Flash Deals -->
+            <div class="flex items-center gap-2.5 overflow-x-auto pb-4 mb-6 no-scrollbar" style="scrollbar-width: none; -ms-overflow-style: none;">
+                <span class="text-xs font-bold uppercase tracking-wider text-gray-400 shrink-0 me-1">Top Brands:</span>
+                @foreach($topBrands->whereNotNull('logo')->take(8) as $quickBrand)
+                    <a href="{{ route('shop', ['brand' => $quickBrand->slug]) }}" class="shrink-0 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-gray-200/90 hover:border-rose-400 hover:shadow-xs text-xs font-bold text-gray-700 hover:text-rose-600 transition group" title="Shop {{ $quickBrand->name }}">
+                        @if($quickBrand->logo_url)
+                            <img src="{{ $quickBrand->logo_url }}" alt="{{ $quickBrand->name }}" class="h-4 w-auto max-w-[48px] object-contain group-hover:scale-105 transition-transform">
+                        @endif
+                        <span>{{ $quickBrand->name }}</span>
+                    </a>
+                @endforeach
+            </div>
+        @endif
+
         <!-- Carousel Track with 4 full cards on desktop -->
         <div x-ref="dealTrack" class="flex gap-5 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-4 no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0" style="scrollbar-width: none; -ms-overflow-style: none;">
             @foreach($latestDeals as $dealProd)
@@ -379,6 +394,9 @@
                         <!-- Top Badges Row: Brand, Marketing Tag & Stock Status -->
                         <div class="flex items-center justify-between gap-2 mb-3 pr-8">
                             <div class="flex items-center gap-1.5 flex-wrap min-w-0">
+                                @if($dealProd->brand?->logo_url)
+                                    <img src="{{ $dealProd->brand->logo_url }}" alt="{{ $dealProd->brand->name }}" class="h-3.5 w-auto max-w-[36px] object-contain inline-block me-0.5">
+                                @endif
                                 <span class="text-[11px] font-extrabold text-gray-400 uppercase tracking-wider group-hover:text-rose-600 transition truncate">
                                     {{ $dealProd->brand?->name ?? 'Hardware' }}
                                 </span>
@@ -517,6 +535,69 @@
                         </div>
                     </div>
                 </div>
+            @endforeach
+        </div>
+    </div>
+</section>
+@endif
+
+@if($topBrands->isNotEmpty())
+<!-- Authorized Component Brands Showcase -->
+<section id="partner-brands" class="bg-white py-16 border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
+            <div>
+                <span class="text-xs font-bold uppercase tracking-wider text-blue-600 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+                    Certified Hardware Partners
+                </span>
+                <h2 class="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mt-1">Authorized Component Brands</h2>
+                <p class="text-sm text-gray-500 mt-1">Authentic desktop components and hardware directly from world-renowned manufacturers</p>
+            </div>
+            <div>
+                <a href="{{ route('shop') }}" class="text-xs sm:text-sm font-semibold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1 group">
+                    <span>Explore All Brands</span>
+                    <span class="group-hover:translate-x-0.5 transition-transform">&rarr;</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-5">
+            @foreach($topBrands as $brand)
+                <a 
+                    href="{{ route('shop', ['brand' => $brand->slug]) }}" 
+                    class="group relative bg-white hover:bg-slate-50/80 rounded-2xl p-4 border border-slate-200/80 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/5 transition-all duration-300 flex flex-col items-center justify-between text-center h-36"
+                    title="Browse {{ $brand->name }} components"
+                >
+                    <div class="h-16 w-full flex items-center justify-center p-1.5 overflow-hidden">
+                        @if($brand->logo_url)
+                            <img 
+                                src="{{ $brand->logo_url }}" 
+                                alt="{{ $brand->name }} Logo" 
+                                class="max-h-10 max-w-[100px] w-auto h-auto object-contain transition-all duration-300 group-hover:scale-105"
+                                style="max-height: 40px; max-width: 100px; width: auto; height: auto;"
+                                loading="lazy"
+                            >
+                        @else
+                            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-300 text-slate-700 font-bold text-sm flex items-center justify-center shadow-xs group-hover:border-blue-400 group-hover:text-blue-600 transition-colors">
+                                {{ strtoupper(substr($brand->name, 0, 2)) }}
+                            </div>
+                        @endif
+                    </div>
+
+                    <div class="w-full pt-2 border-t border-slate-100/80">
+                        <span class="block text-xs font-semibold text-gray-900 group-hover:text-blue-600 transition-colors truncate">
+                            {{ $brand->name }}
+                        </span>
+                        <span class="block text-[11px] text-gray-400 group-hover:text-gray-500 transition-colors mt-0.5 truncate">
+                            @if($brand->products_count > 0)
+                                {{ $brand->products_count }} {{ Str::plural('item', $brand->products_count) }}
+                            @else
+                                Authorized
+                            @endif
+                        </span>
+                    </div>
+                </a>
             @endforeach
         </div>
     </div>

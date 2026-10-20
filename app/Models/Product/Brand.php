@@ -60,8 +60,20 @@ class Brand extends Model
      */
     public function getLogoUrlAttribute(): ?string
     {
-        if ($this->logo && Storage::disk('public')->exists($this->logo)) {
+        if (! $this->logo) {
+            return null;
+        }
+
+        if (str_starts_with($this->logo, 'http://') || str_starts_with($this->logo, 'https://')) {
+            return $this->logo;
+        }
+
+        if (Storage::disk('public')->exists($this->logo)) {
             return Storage::disk('public')->url($this->logo);
+        }
+
+        if (file_exists(public_path($this->logo))) {
+            return asset($this->logo);
         }
 
         return null;
