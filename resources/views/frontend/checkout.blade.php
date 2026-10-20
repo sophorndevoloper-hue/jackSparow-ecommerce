@@ -240,6 +240,68 @@
                             @endforelse
                         </div>
 
+                        @if(isset($eligiblePaymentTerms) && $eligiblePaymentTerms->isNotEmpty())
+                            <div class="mt-6 pt-5 border-t border-slate-200">
+                                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                                    <div>
+                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-semibold">
+                                            <i class="bi bi-building-check"></i> B2B Corporate Credit Terms
+                                        </span>
+                                        <p class="text-xs text-slate-500 mt-1">Available for your <strong>{{ $customerGroup?->name }}</strong> account.</p>
+                                    </div>
+                                    @if(isset($creditLimit) && $creditLimit > 0)
+                                        <div class="text-right">
+                                            <span class="text-[11px] uppercase tracking-wider text-slate-400 font-bold block">Available Credit</span>
+                                            <span class="text-xs font-black text-slate-800">${{ number_format($availableCredit, 2) }} / ${{ number_format($creditLimit, 2) }}</span>
+                                        </div>
+                                    @endif
+                                </div>
+
+                                <div class="space-y-2.5">
+                                    @foreach($eligiblePaymentTerms as $term)
+                                        <label class="flex items-start justify-between p-4 rounded-2xl border border-indigo-100 bg-indigo-50/20 hover:border-indigo-400 hover:bg-indigo-50/50 cursor-pointer transition-all has-[:checked]:border-indigo-600 has-[:checked]:bg-indigo-50/80 has-[:checked]:ring-1 has-[:checked]:ring-indigo-600">
+                                            <div class="flex items-start gap-3.5">
+                                                <input type="radio"
+                                                       name="payment_method"
+                                                       value="payment_term"
+                                                       onclick="document.getElementById('selected_payment_term_id').value = '{{ $term->id }}'"
+                                                       {{ old('payment_method') === 'payment_term' && old('payment_term_id', $term->is_default ? $term->id : null) == $term->id ? 'checked' : '' }}
+                                                       class="mt-1 text-indigo-600 focus:ring-indigo-500">
+                                                <div>
+                                                    <div class="flex items-center gap-2">
+                                                        <strong class="text-sm text-gray-900">{{ $term->name }}</strong>
+                                                        @if($term->is_default)
+                                                            <span class="px-2 py-0.5 text-[10px] rounded-md font-bold bg-indigo-600 text-white">Default</span>
+                                                        @endif
+                                                    </div>
+                                                    <p class="text-xs text-slate-600 mt-0.5">{{ $term->description ?: $term->formatted_term }}</p>
+                                                    <div class="flex flex-wrap gap-2 mt-2">
+                                                        <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200">
+                                                            <i class="bi bi-calendar-event"></i> Due in {{ $term->days }} days
+                                                        </span>
+                                                        @if($term->early_payment_discount_percentage > 0)
+                                                            <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                                                <i class="bi bi-cash-stack"></i> Save {{ (float) $term->early_payment_discount_percentage }}% if paid within {{ $term->early_payment_days }}d
+                                                            </span>
+                                                        @endif
+                                                        @if($term->require_deposit)
+                                                            <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                                                <i class="bi bi-shield-check"></i> {{ (float) $term->deposit_percentage }}% Upfront Deposit
+                                                            </span>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    @endforeach
+                                </div>
+                                <input type="hidden" name="payment_term_id" id="selected_payment_term_id" value="{{ old('payment_term_id', $eligiblePaymentTerms->firstWhere('is_default', true)?->id ?? $eligiblePaymentTerms->first()?->id) }}">
+                                @error('payment_term_id')
+                                    <p class="text-xs text-rose-600 font-semibold mt-1">{{ $message }}</p>
+                                @enderror
+                            </div>
+                        @endif
+
                         @error('payment_method')
                             <p class="text-xs text-rose-600 font-semibold mt-1">{{ $message }}</p>
                         @enderror

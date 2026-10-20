@@ -203,3 +203,43 @@ it('renders the group payment terms menu in the backend sidebar', function () {
     }
     expect($peopleTitles)->toContain('Group Payment Terms');
 });
+
+it('rejects creation if upfront deposit is required but percentage is omitted', function () {
+    $admin = User::factory()->create();
+    $admin->assignRole(Role::findByName('admin', 'backend'));
+
+    $payload = [
+        'name' => 'Deposit Term Missing Percentage',
+        'code' => 'DEP_INVALID',
+        'days' => 30,
+        'require_deposit' => true,
+        'deposit_percentage' => null,
+    ];
+
+    $response = $this->actingAs($admin, 'backend')
+        ->from(route('admin.customer-group-payment-terms.index'))
+        ->post(route('admin.customer-group-payment-terms.store'), $payload);
+
+    $response->assertSessionHasErrors(['deposit_percentage']);
+    expect(CustomerGroupPaymentTerm::where('code', 'DEP_INVALID')->exists())->toBeFalse();
+});
+
+it('rejects creation if early payment days exceeds total settlement days', function () {
+    $admin = User::factory()->create();
+    $admin->assignRole(Role::findByName('admin', 'backend'));
+
+    $payload = [
+        'name' => 'Invalid Days Sequence',
+        'code' => 'INVALID_DAYS',
+        'days' => 15,
+        'early_payment_discount_percentage' => 3.0,
+        'early_payment_days' => 20, // Greater than total days!
+    ];
+
+    $response = $this->actingAs($admin, 'backend')
+        ->from(route('admin.customer-group-payment-terms.index'))
+        ->post(route('admin.customer-group-payment-terms.store'), $payload);
+
+    $response->assertSessionHasErrors(['early_payment_days']);
+    expect(CustomerGroupPaymentTerm::where('code', 'INVALID_DAYS')->exists())->toBeFalse();
+});

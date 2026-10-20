@@ -137,6 +137,7 @@
                                 <label class="form-label fw-bold small">Payment Status</label>
                                 <select name="payment_status" class="form-select">
                                     <option value="pending" {{ $order->payment_status === 'pending' ? 'selected' : '' }}>Pending</option>
+                                    <option value="partially_paid" {{ $order->payment_status === 'partially_paid' ? 'selected' : '' }}>Partially Paid (Deposit Paid)</option>
                                     <option value="paid" {{ $order->payment_status === 'paid' ? 'selected' : '' }}>Paid</option>
                                     <option value="refunded" {{ $order->payment_status === 'refunded' ? 'selected' : '' }}>Refunded</option>
                                 </select>
@@ -164,6 +165,88 @@
                         </div>
                     @endcan
                 </div>
+
+                <!-- B2B Payment Terms & Financial Summary Panel -->
+                @if($order->isNetTerms() || $order->payment_due_date || (float)$order->deposit_amount > 0)
+                    <div class="panel p-4 mb-3 border-start border-4 border-indigo">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0 text-indigo"><i class="bi bi-calendar2-check me-1"></i> B2B Payment Terms</h5>
+                            @if($order->isOverdue())
+                                <span class="badge bg-danger">Overdue</span>
+                            @elseif($order->payment_status === 'paid')
+                                <span class="badge bg-success">Settled</span>
+                            @else
+                                <span class="badge bg-primary">Active Term</span>
+                            @endif
+                        </div>
+
+                        <div class="small space-y-2">
+                            <div>
+                                <span class="text-muted d-block">Agreed Term:</span>
+                                <strong class="text-dark">{{ $order->paymentTerm?->name ?? 'Custom Net Settlement' }}</strong>
+                            </div>
+
+                            @if($order->payment_due_date)
+                                <div>
+                                    <span class="text-muted d-block">Due Date:</span>
+                                    <strong class="{{ $order->isOverdue() ? 'text-danger' : 'text-dark' }}">
+                                        {{ $order->payment_due_date->format('M d, Y') }}
+                                        @if($order->isOverdue())
+                                            <span class="text-danger small">({{ $order->payment_due_date->diffForHumans() }})</span>
+                                        @endif
+                                    </strong>
+                                </div>
+                            @endif
+
+                            @if((float)$order->deposit_amount > 0)
+                                <div class="p-2 bg-light rounded border">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <span class="text-muted d-block" style="font-size: 11px;">Upfront Deposit:</span>
+                                            <strong class="text-dark">${{ number_format($order->deposit_amount, 2) }}</strong>
+                                        </div>
+                                        @if($order->deposit_paid)
+                                            <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> Deposit Paid</span>
+                                        @else
+                                            <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i> Deposit Pending</span>
+                                        @endif
+                                    </div>
+                                    @if(! $order->deposit_paid && $order->payment_status !== 'paid')
+                                        @can('edit orders')
+                                            <form action="{{ route('admin.orders.mark-deposit-paid', $order->id) }}" method="POST" class="mt-2">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit" class="btn btn-outline-success btn-sm w-100 py-0" style="font-size: 11px;">
+                                                    <i class="bi bi-check-lg me-1"></i> Mark Deposit as Paid
+                                                </button>
+                                            </form>
+                                        @endcan
+                                    @endif
+                                </div>
+                            @endif
+
+                            @if((float)$order->early_payment_discount_amount > 0 && $order->early_payment_discount_deadline)
+                                <div class="p-2 bg-emerald-50 rounded border border-emerald-200 text-emerald-800" style="font-size: 12px;">
+                                    <i class="bi bi-piggy-bank me-1"></i> Early Discount:
+                                    <strong>${{ number_format($order->early_payment_discount_amount, 2) }}</strong>
+                                    if settled by <strong>{{ $order->early_payment_discount_deadline->format('M d, Y') }}</strong>.
+                                </div>
+                            @endif
+
+                            @if((float)$order->late_fee_amount > 0)
+                                <div class="p-2 bg-danger-subtle rounded border border-danger-subtle text-danger" style="font-size: 12px;">
+                                    <i class="bi bi-exclamation-octagon me-1"></i> Late Penalty Accrued:
+                                    <strong>+${{ number_format($order->late_fee_amount, 2) }}</strong>
+                                </div>
+                            @endif
+
+                            <div class="pt-2 border-top d-flex justify-content-between align-items-center">
+                                <span class="text-muted fw-bold">Remaining Balance Due:</span>
+                                <strong class="fs-6 text-primary">${{ number_format($order->remaining_balance, 2) }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                @endif
 
                 <!-- Customer Details Panel -->
                 <div class="panel p-4 mb-3">

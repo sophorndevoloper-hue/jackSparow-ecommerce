@@ -113,6 +113,7 @@ Route::prefix('admin')->middleware(['auth:backend', 'admin.permission'])->as('ad
     // 6. Manage Sale (Orders, RFQ Quotes, Dynamic Pricing, Fulfillment, Payment Methods)
     Route::resource('orders', OrderController::class)->only(['index', 'show']);
     Route::patch('orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.status');
+    Route::patch('orders/{order}/mark-deposit-paid', [OrderController::class, 'markDepositPaid'])->name('orders.mark-deposit-paid');
 
     // RFQ & Quotes
     Route::get('quotes', [QuoteController::class, 'index'])->name('quotes.index');

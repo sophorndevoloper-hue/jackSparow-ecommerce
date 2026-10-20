@@ -7,6 +7,7 @@ use App\Models\CustomerGroup;
 use App\Models\CustomerGroupPaymentTerm;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class CustomerGroupPaymentTermController extends Controller
@@ -81,12 +82,29 @@ class CustomerGroupPaymentTermController extends Controller
             'days' => ['required', 'integer', 'min:0', 'max:365'],
             'description' => ['nullable', 'string', 'max:1000'],
             'early_payment_discount_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'early_payment_days' => ['nullable', 'integer', 'min:0', 'max:365'],
+            'early_payment_days' => [
+                'nullable',
+                'integer',
+                'min:0',
+                'max:365',
+                'lte:days',
+                Rule::requiredIf(fn () => (float) $request->input('early_payment_discount_percentage') > 0),
+            ],
             'late_fee_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'require_deposit' => ['nullable', 'boolean'],
-            'deposit_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'deposit_percentage' => [
+                'nullable',
+                'numeric',
+                'min:0',
+                'max:100',
+                Rule::requiredIf(fn () => $request->boolean('require_deposit')),
+            ],
             'is_default' => ['nullable', 'boolean'],
             'is_active' => ['nullable', 'boolean'],
+        ], [
+            'deposit_percentage.required_if' => 'Please provide a deposit percentage when upfront deposit is required.',
+            'early_payment_days.required_if' => 'Please specify the number of days eligible for the early settlement discount.',
+            'early_payment_days.lte' => 'Early payment discount days cannot exceed the total payment settlement days.',
         ]);
 
         $validated['code'] = strtoupper(str_replace(' ', '_', trim($validated['code'])));
@@ -122,12 +140,29 @@ class CustomerGroupPaymentTermController extends Controller
             'days' => ['required', 'integer', 'min:0', 'max:365'],
             'description' => ['nullable', 'string', 'max:1000'],
             'early_payment_discount_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'early_payment_days' => ['nullable', 'integer', 'min:0', 'max:365'],
+            'early_payment_days' => [
+                'nullable',
+                'integer',
+                'min:0',
+                'max:365',
+                'lte:days',
+                Rule::requiredIf(fn () => (float) $request->input('early_payment_discount_percentage') > 0),
+            ],
             'late_fee_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'require_deposit' => ['nullable', 'boolean'],
-            'deposit_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'deposit_percentage' => [
+                'nullable',
+                'numeric',
+                'min:0',
+                'max:100',
+                Rule::requiredIf(fn () => $request->boolean('require_deposit')),
+            ],
             'is_default' => ['nullable', 'boolean'],
             'is_active' => ['nullable', 'boolean'],
+        ], [
+            'deposit_percentage.required_if' => 'Please provide a deposit percentage when upfront deposit is required.',
+            'early_payment_days.required_if' => 'Please specify the number of days eligible for the early settlement discount.',
+            'early_payment_days.lte' => 'Early payment discount days cannot exceed the total payment settlement days.',
         ]);
 
         $validated['code'] = strtoupper(str_replace(' ', '_', trim($validated['code'])));

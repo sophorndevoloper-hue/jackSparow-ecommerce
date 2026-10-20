@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Backend\CustomerGroupPaymentTerm;
 use App\Models\Backend\Delivery;
 use App\Models\Frontend\FrontendUser;
 use Database\Factories\OrderFactory;
@@ -25,6 +26,14 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
     'payment_status',
     'payment_method',
     'payment_due_date',
+    'payment_term_id',
+    'deposit_amount',
+    'deposit_paid',
+    'deposit_paid_at',
+    'early_payment_discount_amount',
+    'early_payment_discount_deadline',
+    'late_fee_amount',
+    'late_fee_applied_at',
     'shipping_method_id',
     'subtotal',
     'tax_amount',
@@ -50,6 +59,13 @@ class Order extends Model
     {
         return [
             'payment_due_date' => 'date',
+            'deposit_amount' => 'decimal:2',
+            'deposit_paid' => 'boolean',
+            'deposit_paid_at' => 'datetime',
+            'early_payment_discount_amount' => 'decimal:2',
+            'early_payment_discount_deadline' => 'date',
+            'late_fee_amount' => 'decimal:2',
+            'late_fee_applied_at' => 'datetime',
             'subtotal' => 'decimal:2',
             'tax_amount' => 'decimal:2',
             'shipping_fee' => 'decimal:2',
@@ -194,5 +210,50 @@ class Order extends Model
         }
 
         return $this->totalSerialsAttachedCount() >= $required;
+    }
+
+    /**
+     * B2B customer group payment term assigned to this order.
+     *
+     * @return BelongsTo<CustomerGroupPaymentTerm, $this>
+     */
+    public function paymentTerm(): BelongsTo
+    {
+        return $this->belongsTo(CustomerGroupPaymentTerm::class, 'payment_term_id');
+    }
+
+    /**
+     * Whether this order is operating under Net credit settlement terms.
+     */
+    public function isNetTerms(): bool
+    {
+        return ! empty($this->payment_term_id);
+    }
+
+    /**
+     * Determine if payment is past due date.
+     */
+    public function isOverdue(): bool
+    {
+        return $this->payment_status !== 'paid'
+            && ! empty($this->payment_due_date)
+            && $this->payment_due_date->isPast();
+    }
+
+    /**
+     * Calculate remaining outstanding balance taking deposits and late fees into account.
+     */
+    public function getRemainingBalanceAttribute(): float
+    {
+        if ($this->payment_status === 'paid') {
+            return 0.00;
+        }
+
+        $base = (float) $this->total_amount + (float) $this->late_fee_amount;
+        if ($this->deposit_paid) {
+            $base -= (float) $this->deposit_amount;
+        }
+
+        return max(0.00, round($base, 2));
     }
 }

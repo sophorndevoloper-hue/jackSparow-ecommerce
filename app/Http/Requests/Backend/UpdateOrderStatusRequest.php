@@ -24,7 +24,7 @@ class UpdateOrderStatusRequest extends FormRequest
     {
         return [
             'status' => ['required', Rule::in(['pending', 'processing', 'shipped', 'delivered', 'cancelled'])],
-            'payment_status' => ['required', Rule::in(['pending', 'paid', 'failed', 'refunded'])],
+            'payment_status' => ['required', Rule::in(['pending', 'partially_paid', 'paid', 'failed', 'refunded'])],
             'admin_notes' => ['nullable', 'string', 'max:1000'],
         ];
     }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Backend;
 
 use App\DataTables\CustomerGroupDataTable;
 use App\Http\Controllers\Controller;
+use App\Models\Backend\CustomerGroupPaymentTerm;
 use App\Models\CustomerGroup;
 use App\Models\FrontendUser;
 use Illuminate\Http\RedirectResponse;
@@ -51,7 +52,23 @@ class CustomerGroupController extends Controller
         $validated['tax_exempt'] = $request->boolean('tax_exempt');
         $validated['is_active'] = $request->boolean('is_active', true);
 
-        CustomerGroup::create($validated);
+        $group = CustomerGroup::create($validated);
+
+        if (! empty($validated['payment_terms_days']) && (int) $validated['payment_terms_days'] > 0) {
+            CustomerGroupPaymentTerm::firstOrCreate(
+                [
+                    'customer_group_id' => $group->id,
+                    'days' => (int) $validated['payment_terms_days'],
+                ],
+                [
+                    'name' => "{$group->name} - Net {$validated['payment_terms_days']} Days",
+                    'code' => strtoupper(str_replace([' ', '-'], '_', $group->code)).'_NET_'.$validated['payment_terms_days'],
+                    'description' => "Default payment term automatically configured for {$group->name}.",
+                    'is_default' => true,
+                    'is_active' => true,
+                ]
+            );
+        }
 
         return redirect()->route('admin.customer-groups.index')->with('success', "Customer group '{$validated['name']}' created successfully.");
     }
@@ -78,6 +95,22 @@ class CustomerGroupController extends Controller
         $validated['is_active'] = $request->boolean('is_active');
 
         $customerGroup->update($validated);
+
+        if (! empty($validated['payment_terms_days']) && (int) $validated['payment_terms_days'] > 0) {
+            CustomerGroupPaymentTerm::firstOrCreate(
+                [
+                    'customer_group_id' => $customerGroup->id,
+                    'days' => (int) $validated['payment_terms_days'],
+                ],
+                [
+                    'name' => "{$customerGroup->name} - Net {$validated['payment_terms_days']} Days",
+                    'code' => strtoupper(str_replace([' ', '-'], '_', $customerGroup->code)).'_NET_'.$validated['payment_terms_days'],
+                    'description' => "Default payment term automatically configured for {$customerGroup->name}.",
+                    'is_default' => true,
+                    'is_active' => true,
+                ]
+            );
+        }
 
         return redirect()->route('admin.customer-groups.index')->with('success', "Customer group '{$customerGroup->name}' updated successfully.");
     }

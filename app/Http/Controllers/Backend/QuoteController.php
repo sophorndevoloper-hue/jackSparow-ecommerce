@@ -3,6 +3,10 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
+use App\Models\Backend\CustomerGroupPaymentTerm;
+use App\Models\Customer;
+use App\Models\CustomerGroup;
+use App\Models\Frontend\FrontendUser;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -254,7 +258,88 @@ class QuoteController extends Controller
                 ->with('info', 'Quote was already converted to Order.');
         }
 
+        // Resolve customer group and applicable payment term
+        $customerGroup = null;
+        $matchedUser = null;
+        $matchedCustomer = null;
+
+        if (! empty($quote->client_email)) {
+            $matchedUser = FrontendUser::where('email', $quote->client_email)->first();
+            $matchedCustomer = Customer::where('email', $quote->client_email)->first();
+        }
+
+        if (! $matchedCustomer && ! empty($quote->company_name)) {
+            $matchedCustomer = Customer::where('company_name', $quote->company_name)->first();
+        }
+
+        if ($matchedUser?->customerGroup) {
+            $customerGroup = $matchedUser->customerGroup;
+        } elseif ($matchedCustomer?->customerGroup) {
+            $customerGroup = $matchedCustomer->customerGroup;
+        } elseif (! empty($quote->company_tier)) {
+            $customerGroup = CustomerGroup::where('name', $quote->company_tier)
+                ->orWhere('code', $quote->company_tier)
+                ->first();
+        }
+
+        $paymentTerm = null;
+        if ($customerGroup) {
+            $paymentTerm = CustomerGroupPaymentTerm::where('customer_group_id', $customerGroup->id)
+                ->where('is_active', true)
+                ->where('is_default', true)
+                ->first()
+                ?? CustomerGroupPaymentTerm::where('customer_group_id', $customerGroup->id)
+                    ->where('is_active', true)
+                    ->first();
+        }
+
+        if (! $paymentTerm) {
+            $paymentTerm = CustomerGroupPaymentTerm::whereNull('customer_group_id')
+                ->where('is_active', true)
+                ->where('is_default', true)
+                ->first();
+        }
+
+        $days = $paymentTerm ? $paymentTerm->days : ($customerGroup?->payment_terms_days ?? 30);
+        $dueDate = now()->addDays($days)->toDateString();
+
+        $depositAmount = ($paymentTerm && $paymentTerm->require_deposit && $paymentTerm->deposit_percentage > 0)
+            ? round((float) $quote->total_quoted_price * ((float) $paymentTerm->deposit_percentage / 100), 2)
+            : 0.00;
+
+        $earlyDiscountAmount = ($paymentTerm && $paymentTerm->early_payment_discount_percentage > 0)
+            ? round((float) $quote->subtotal * ((float) $paymentTerm->early_payment_discount_percentage / 100), 2)
+            : 0.00;
+
+        $earlyDiscountDeadline = ($paymentTerm && $paymentTerm->early_payment_days > 0)
+            ? now()->addDays($paymentTerm->early_payment_days)->toDateString()
+            : null;
+
         $orderNumber = 'ORD-'.date('Y').'-'.strtoupper(Str::random(6));
+
+        $creditWarning = '';
+        if ($customerGroup && $paymentTerm) {
+            $creditLimit = (float) ($matchedUser?->credit_limit > 0 ? $matchedUser->credit_limit : ($customerGroup->credit_limit ?? 0));
+            if ($creditLimit > 0) {
+                $outstanding = (float) Order::where(function ($q) use ($matchedUser, $matchedCustomer, $quote) {
+                    if ($matchedUser) {
+                        $q->where('frontend_user_id', $matchedUser->id);
+                    } elseif ($matchedCustomer) {
+                        $q->where('customer_id', $matchedCustomer->id);
+                    } else {
+                        $q->where('customer_email', $quote->client_email);
+                    }
+                })->whereIn('payment_status', ['pending', 'partially_paid'])->sum('total_amount');
+
+                if (($outstanding + (float) $quote->total_quoted_price) > $creditLimit) {
+                    $creditWarning = ' [CREDIT WARNING: Total unpaid balance of $'.number_format($outstanding + (float) $quote->total_quoted_price, 2).' exceeds approved credit limit of $'.number_format($creditLimit, 2).'].';
+                }
+            }
+        }
+
+        $adminNotes = "Approved B2B Quote with {$quote->target_margin_percent}% custom margin.".($paymentTerm ? " Applied payment term: {$paymentTerm->name}." : '').$creditWarning;
+
+        $paymentMethodLabel = $paymentTerm ? "Net Terms ({$paymentTerm->name})" : 'Bank Wire / Terms';
 
         $order = Order::create([
             'order_number' => $orderNumber,
@@ -263,7 +348,14 @@ class QuoteController extends Controller
             'customer_phone' => $quote->client_phone,
             'status' => 'confirmed',
             'payment_status' => 'pending',
-            'payment_method' => 'Bank Wire / Terms',
+            'payment_method' => $paymentMethodLabel,
+            'payment_due_date' => $dueDate,
+            'payment_term_id' => $paymentTerm?->id,
+            'deposit_amount' => $depositAmount,
+            'deposit_paid' => false,
+            'early_payment_discount_amount' => $earlyDiscountAmount,
+            'early_payment_discount_deadline' => $earlyDiscountDeadline,
+            'late_fee_amount' => 0.00,
             'subtotal' => $quote->subtotal,
             'tax_amount' => $quote->tax_amount,
             'shipping_fee' => 0.00,
@@ -277,7 +369,7 @@ class QuoteController extends Controller
                 'country' => 'Cambodia',
             ],
             'customer_notes' => "Converted from Quote {$quote->quote_number}. {$quote->client_notes}",
-            'admin_notes' => "Approved B2B Quote with {$quote->target_margin_percent}% custom margin.",
+            'admin_notes' => $adminNotes,
         ]);
 
         foreach ($quote->items as $item) {

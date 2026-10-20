@@ -207,7 +207,9 @@ class B2BReportingService
 
             $companyName = $customer?->company_name ?: ($customer?->name ?: $firstOrder->customer_name);
             $tier = $customer?->tier ?: ($group?->name ?: 'Standard');
-            $paymentTerms = $group?->payment_terms_days ? "Net {$group->payment_terms_days}" : 'Net 30';
+            $paymentTerms = $firstOrder?->paymentTerm?->name
+                ?? $group?->paymentTerms()?->where('is_default', true)->first()?->name
+                ?? ($group?->payment_terms_days ? "Net {$group->payment_terms_days}" : 'Net 30');
             $creditLimit = (float) ($customer?->credit_limit ?? $group?->credit_limit ?? 50000);
             $creditBalance = (float) ($customer?->credit_balance ?? 0);
 
