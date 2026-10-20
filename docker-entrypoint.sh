@@ -14,7 +14,7 @@ chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
 # 1. Run migrations FIRST so database tables exist
 php artisan migrate --force || true
-php artisan db:seed --force || true
+# php artisan db:seed --force || true
 
 # 2. Clear stale cache safely now that database tables are present
 php artisan config:clear || true
