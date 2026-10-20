@@ -32,8 +32,10 @@ use App\Observers\AuditObserver;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -53,9 +55,20 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // 1. Force HTTPS and correct asset paths when deployed on Render / production
+        if ($this->app->environment('production') || env('RENDER') || str_starts_with(config('app.url', ''), 'https://')) {
+            URL::forceScheme('https');
+            $this->app['request']->server->set('HTTPS', 'on');
+        }
+
+        if (config('app.asset_url')) {
+            URL::forceRootUrl(config('app.asset_url'));
+        }
+
+        // 2. Pagination
         Paginator::useBootstrapFive();
 
-        // Grant all permissions implicitly to users with the 'admin' or 'superadmin' role
+        // 3. Grant all permissions implicitly to users with the 'admin' or 'superadmin' role
         Gate::before(function ($user, $ability) {
             if (method_exists($user, 'hasRole')) {
                 if ($user->hasRole('superadmin', 'backend') || $user->hasRole('admin', 'backend') || $user->hasRole('superadmin') || $user->hasRole('admin')) {
@@ -66,7 +79,7 @@ class AppServiceProvider extends ServiceProvider
             return null;
         });
 
-        // 1. Audit Authentication Events (Login / Logout)
+        // 4. Audit Authentication Events (Login / Logout)
         Event::listen(Login::class, function (Login $event) {
             $user = $event->user;
             $guard = $event->guard ?? 'web';
@@ -111,7 +124,7 @@ class AppServiceProvider extends ServiceProvider
             }
         });
 
-        // 2. Automated Eloquent Audit Observer for CREATE, UPDATE, DELETE
+        // 5. Automated Eloquent Audit Observer for CREATE, UPDATE, DELETE
         $auditedModels = [
             Product::class,
             ProductCollection::class,
@@ -147,5 +160,12 @@ class AppServiceProvider extends ServiceProvider
                 $modelClass::observe(AuditObserver::class);
             }
         }
+
+        // 6. Blade Admin Components & Aliases
+        Blade::anonymousComponentPath(resource_path('views/admin/component'), 'admin');
+        Blade::component('admin.component.datatable', 'admin-datatable');
+        Blade::component('admin.component.model', 'admin-modal');
+        Blade::component('admin.component.toast', 'admin-toast');
+        Blade::component('admin.component.confirm-modal', 'admin-confirm-modal');
     }
 }
