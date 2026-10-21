@@ -63,9 +63,14 @@ RUN rm -f /etc/nginx/http.d/default.conf && \
     echo '    location / {' >> /etc/nginx/http.d/laravel.conf && \
     echo '        try_files $uri $uri/ /index.php?$query_string;' >> /etc/nginx/http.d/laravel.conf && \
     echo '    }' >> /etc/nginx/http.d/laravel.conf && \
-    echo '    location ~* \.(css|js|jpg|jpeg|png|gif|ico|svg|woff|woff2|ttf)$ {' >> /etc/nginx/http.d/laravel.conf && \
+    echo '    location ^~ /storage/ {' >> /etc/nginx/http.d/laravel.conf && \
+    echo '        expires 7d;' >> /etc/nginx/http.d/laravel.conf && \
+    echo '        try_files $uri /assets/images/placeholder-product.svg;' >> /etc/nginx/http.d/laravel.conf && \
+    echo '    }' >> /etc/nginx/http.d/laravel.conf && \
+    echo '    location ~* \.(css|js|jpg|jpeg|png|gif|ico|svg|webp|avif|woff|woff2|ttf)$ {' >> /etc/nginx/http.d/laravel.conf && \
     echo '        expires max;' >> /etc/nginx/http.d/laravel.conf && \
     echo '        log_not_found off;' >> /etc/nginx/http.d/laravel.conf && \
+    echo '        try_files $uri =404;' >> /etc/nginx/http.d/laravel.conf && \
     echo '    }' >> /etc/nginx/http.d/laravel.conf && \
     echo '    location ~ \.php$ {' >> /etc/nginx/http.d/laravel.conf && \
     echo '        fastcgi_pass 127.0.0.1:9000;' >> /etc/nginx/http.d/laravel.conf && \

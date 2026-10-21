@@ -218,15 +218,15 @@
                                         alt="{{ $product->name }}" 
                                         class="w-full h-full object-contain p-1 group-hover:scale-108 transition-transform duration-300 ease-out"
                                         loading="lazy"
-                                        onerror="this.onerror=null; this.parentElement.classList.add('flex-col'); this.innerHTML='<div class=\'w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-1.5 shadow-xs\'><svg class=\'w-7 h-7\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.8\' d=\'M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z\'/></svg></div><span class=\'text-[10px] font-bold text-gray-400 uppercase tracking-wider\'>{{ $product->sku }}</span>';"
+                                        onerror="this.onerror=null; this.src='{{ asset('assets/images/placeholder-product.svg') }}';"
                                     >
                                 @else
-                                    <div class="flex flex-col items-center justify-center text-center">
-                                        <div class="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-1.5 shadow-xs">
-                                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
-                                        </div>
-                                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{{ $product->sku }}</span>
-                                    </div>
+                                    <img 
+                                        src="{{ asset('assets/images/placeholder-product.svg') }}" 
+                                        alt="{{ $product->name }}" 
+                                        class="w-full h-full object-contain p-1 group-hover:scale-108 transition-transform duration-300 ease-out opacity-80"
+                                        loading="lazy"
+                                    >
                                 @endif
                             </div>
                         </a>
@@ -446,15 +446,15 @@
                                         alt="{{ $dealProd->name }}" 
                                         class="w-full h-full object-contain p-1 group-hover:scale-108 transition-transform duration-300 ease-out"
                                         loading="lazy"
-                                        onerror="this.onerror=null; this.parentElement.classList.add('flex-col'); this.innerHTML='<div class=\'w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mb-1.5 shadow-xs\'><svg class=\'w-7 h-7\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.8\' d=\'M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z\'/></svg></div><span class=\'text-[10px] font-bold text-gray-400 uppercase tracking-wider\'>{{ $dealProd->sku }}</span>';"
+                                        onerror="this.onerror=null; this.src='{{ asset('assets/images/placeholder-product.svg') }}';"
                                     >
                                 @else
-                                    <div class="flex flex-col items-center justify-center text-center">
-                                        <div class="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mb-1.5 shadow-xs">
-                                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
-                                        </div>
-                                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{{ $dealProd->sku }}</span>
-                                    </div>
+                                    <img 
+                                        src="{{ asset('assets/images/placeholder-product.svg') }}" 
+                                        alt="{{ $dealProd->name }}" 
+                                        class="w-full h-full object-contain p-1 group-hover:scale-108 transition-transform duration-300 ease-out opacity-80"
+                                        loading="lazy"
+                                    >
                                 @endif
                             </div>
                         </a>

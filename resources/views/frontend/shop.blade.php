@@ -321,15 +321,15 @@
                                             alt="{{ $product->name }}" 
                                             class="w-full h-full object-contain p-1 group-hover:scale-105 transition-transform duration-300 ease-out"
                                             loading="lazy"
-                                            onerror="this.onerror=null; this.parentElement.classList.add('flex-col'); this.innerHTML='<div class=\'w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-1.5 shadow-xs\'><i class=\'bi bi-cpu fs-3\'></i></div><span class=\'text-[10px] font-bold text-gray-400 uppercase tracking-wider\'>{{ $product->sku }}</span>';"
+                                            onerror="this.onerror=null; this.src='{{ asset('assets/images/placeholder-product.svg') }}';"
                                         >
                                     @else
-                                        <div class="flex flex-col items-center justify-center text-center">
-                                            <div class="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-1.5 shadow-xs">
-                                                <i class="bi bi-cpu fs-3"></i>
-                                            </div>
-                                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{{ $product->sku }}</span>
-                                        </div>
+                                        <img 
+                                            src="{{ asset('assets/images/placeholder-product.svg') }}" 
+                                            alt="{{ $product->name }}" 
+                                            class="w-full h-full object-contain p-1 group-hover:scale-105 transition-transform duration-300 ease-out opacity-80"
+                                            loading="lazy"
+                                        >
                                     @endif
                                 </div>
                             </a>

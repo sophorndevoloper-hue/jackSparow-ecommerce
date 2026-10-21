@@ -47,15 +47,15 @@
                             src="{{ $product->primary_image_url }}" 
                             alt="{{ $product->name }}" 
                             class="w-full h-full object-contain p-2 transition duration-300 group-hover:scale-105"
+                            onerror="this.onerror=null; this.src='{{ asset('assets/images/placeholder-product.svg') }}';"
                         >
                     @else
-                        <div class="flex flex-col items-center justify-center text-center">
-                            <div class="w-24 h-24 rounded-3xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3 shadow-xs">
-                                <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
-                            </div>
-                            <span class="text-xs font-mono font-bold text-gray-500 uppercase tracking-widest">{{ $product->sku }}</span>
-                            <span class="text-xs text-gray-400 mt-1">Genuine Hardware Component</span>
-                        </div>
+                        <img 
+                            id="mainProductImage"
+                            src="{{ asset('assets/images/placeholder-product.svg') }}" 
+                            alt="{{ $product->name }}" 
+                            class="w-full h-full object-contain p-2 transition duration-300 group-hover:scale-105 opacity-80"
+                        >
                     @endif
                 </div>
 
@@ -247,7 +247,7 @@
                             <a href="{{ route('product.show', $related->slug) }}" class="block">
                                 <div class="h-36 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center p-2 mb-3 overflow-hidden">
                                     @if($related->primary_image_url)
-                                        <img src="{{ $related->primary_image_url }}" alt="{{ $related->name }}" class="w-full h-full object-contain hover:scale-105 transition duration-200">
+                                        <img src="{{ $related->primary_image_url }}" alt="{{ $related->name }}" class="w-full h-full object-contain hover:scale-105 transition duration-200" onerror="this.onerror=null; this.src='{{ asset('assets/images/placeholder-product.svg') }}';">
                                     @else
                                         <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
                                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
@@ -305,7 +305,7 @@
                             <a href="{{ route('product.show', $recent->slug) }}" class="block">
                                 <div class="h-36 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center p-2 mb-3 overflow-hidden">
                                     @if($recent->primary_image_url)
-                                        <img src="{{ $recent->primary_image_url }}" alt="{{ $recent->name }}" class="w-full h-full object-contain hover:scale-105 transition duration-200">
+                                        <img src="{{ $recent->primary_image_url }}" alt="{{ $recent->name }}" class="w-full h-full object-contain hover:scale-105 transition duration-200" onerror="this.onerror=null; this.src='{{ asset('assets/images/placeholder-product.svg') }}';">
                                     @else
                                         <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
                                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
