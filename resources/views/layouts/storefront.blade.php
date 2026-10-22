@@ -93,6 +93,62 @@ $footerMenus = \App\Models\StorefrontMenu::getTree('footer');
             }
         }
 
+        /* Universal bulletproof product image sizing */
+        .product-card-img-stage {
+            width: 100% !important;
+            height: 135px !important;
+            max-height: 135px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            position: relative !important;
+            overflow: hidden !important;
+        }
+
+        @media (min-width: 640px) {
+            .product-card-img-stage {
+                height: 145px !important;
+                max-height: 145px !important;
+            }
+        }
+
+        .product-card-img-stage img {
+            max-height: 100% !important;
+            max-width: 100% !important;
+            width: auto !important;
+            height: auto !important;
+            object-fit: contain !important;
+            margin: 0 auto !important;
+        }
+
+        /* 5-Item Carousel Card Layout */
+        .deal-card-5col {
+            width: 220px;
+            flex: 0 0 220px;
+        }
+
+        @media (min-width: 640px) {
+            .deal-card-5col {
+                width: 240px;
+                flex: 0 0 240px;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .deal-card-5col {
+                width: calc((100% - 32px) / 3);
+                flex: 0 0 calc((100% - 32px) / 3);
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .deal-card-5col {
+                width: calc((100% - 64px) / 5) !important;
+                flex: 0 0 calc((100% - 64px) / 5) !important;
+                max-width: calc((100% - 64px) / 5) !important;
+            }
+        }
+
         /* Animated Toast Keyframes */
         @keyframes toastIconPop {
             0% {

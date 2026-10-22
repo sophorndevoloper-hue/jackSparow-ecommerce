@@ -62,18 +62,22 @@ class HomeController extends Controller
         }
 
         // 2. Flash deals curated in Website Setup -> Website Products (for Carousel)
-        $latestDeals = StorefrontProduct::getForSection('deals', 8);
-        if ($latestDeals->isEmpty()) {
-            $latestDeals = Product::query()
+        $latestDeals = StorefrontProduct::getForSection('deals', 12);
+        if ($latestDeals->count() < 12) {
+            $existingIds = $latestDeals->pluck('id')->filter()->toArray();
+            $additionalDeals = Product::query()
                 ->active()
                 ->whereNotNull('sale_price')
                 ->whereColumn('sale_price', '<', 'price')
+                ->whereNotIn('id', $existingIds)
                 ->whereDoesntHave('storefrontProducts', function ($query) {
                     $query->where('is_active', false);
                 })
                 ->with(['brand', 'category', 'images', 'primaryImage'])
-                ->take(8)
+                ->take(12 - $latestDeals->count())
                 ->get();
+
+            $latestDeals = $latestDeals->concat($additionalDeals);
         }
 
         // 4. Authorized Component Brands

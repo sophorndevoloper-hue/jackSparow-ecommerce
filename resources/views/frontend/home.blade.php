@@ -205,7 +205,7 @@
 
                         <!-- Product Image Stage with Uniform Aspect Ratio -->
                         <a href="{{ route('product.show', $product->slug) }}" class="block relative my-1">
-                            <div class="w-full aspect-[4/3] bg-gradient-to-b from-gray-50/80 to-slate-100/50 rounded-xl border border-gray-100 flex items-center justify-center p-3 relative overflow-hidden group-hover:bg-blue-50/20 transition-colors">
+                            <div class="product-card-img-stage w-full bg-gradient-to-b from-gray-50/80 to-slate-100/50 rounded-xl border border-gray-100 p-3 relative group-hover:bg-blue-50/20 transition-colors" style="height: 175px; max-height: 175px;">
                                 @if($product->sale_price)
                                     <span class="absolute top-2.5 left-2.5 z-10 inline-flex items-center gap-1 bg-rose-600 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-xs uppercase tracking-wide">
                                         SAVE ${{ number_format($product->price - $product->sale_price, 0) }}
@@ -216,7 +216,8 @@
                                     <img 
                                         src="{{ $product->primary_image_url }}" 
                                         alt="{{ $product->name }}" 
-                                        class="w-full h-full object-contain p-1 group-hover:scale-108 transition-transform duration-300 ease-out"
+                                        class="p-1 group-hover:scale-108 transition-transform duration-300 ease-out"
+                                        style="max-height: 100%; max-width: 100%; width: auto; height: auto; object-fit: contain;"
                                         loading="lazy"
                                         onerror="this.onerror=null; this.src='{{ asset('assets/images/placeholder-product.svg') }}';"
                                     >
@@ -224,7 +225,8 @@
                                     <img 
                                         src="{{ asset('assets/images/placeholder-product.svg') }}" 
                                         alt="{{ $product->name }}" 
-                                        class="w-full h-full object-contain p-1 group-hover:scale-108 transition-transform duration-300 ease-out opacity-80"
+                                        class="p-1 group-hover:scale-108 transition-transform duration-300 ease-out opacity-80"
+                                        style="max-height: 100%; max-width: 100%; width: auto; height: auto; object-fit: contain;"
                                         loading="lazy"
                                     >
                                 @endif
@@ -324,49 +326,68 @@
 
 @if($latestDeals->isNotEmpty())
 <!-- Flash Deals & Clearance Showcase -->
-<section class="bg-gradient-to-b from-gray-50 to-white py-16 border-b border-gray-200 overflow-hidden relative" x-data="{
+<section class="bg-gradient-to-b from-gray-50 via-slate-50/60 to-white py-16 sm:py-20 border-b border-gray-200/80 overflow-hidden relative" x-data="{
+    canScrollLeft: false,
+    canScrollRight: true,
+    scrollProgress: 20,
+    currentIndex: 1,
+    totalItems: {{ $latestDeals->count() }},
+    init() {
+        this.updateButtons();
+    },
+    updateButtons() {
+        const el = this.$refs.dealTrack;
+        if (!el) return;
+        this.canScrollLeft = el.scrollLeft > 10;
+        this.canScrollRight = el.scrollLeft + el.clientWidth < el.scrollWidth - 10;
+        const maxScroll = el.scrollWidth - el.clientWidth;
+        const pct = maxScroll > 0 ? (el.scrollLeft / maxScroll) : 0;
+        this.scrollProgress = Math.max(15, Math.min(100, Math.round(pct * 100)));
+        const cardWidth = el.firstElementChild?.clientWidth || 220;
+        this.currentIndex = Math.min(this.totalItems, Math.max(1, Math.round(el.scrollLeft / cardWidth) + 1));
+    },
     scrollLeft() {
-        const step = ($refs.dealTrack.firstElementChild?.clientWidth || 280) + 20;
-        $refs.dealTrack.scrollBy({ left: -step, behavior: 'smooth' });
+        const el = this.$refs.dealTrack;
+        const step = (el.firstElementChild?.clientWidth || 220) + 16;
+        el.scrollBy({ left: -step, behavior: 'smooth' });
     },
     scrollRight() {
-        const step = ($refs.dealTrack.firstElementChild?.clientWidth || 280) + 20;
-        $refs.dealTrack.scrollBy({ left: step, behavior: 'smooth' });
+        const el = this.$refs.dealTrack;
+        const step = (el.firstElementChild?.clientWidth || 220) + 16;
+        el.scrollBy({ left: step, behavior: 'smooth' });
     }
 }">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
+        <!-- Header: Title & View All Link -->
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
             <div>
-                <span class="text-xs font-bold uppercase tracking-wider text-rose-600 flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-rose-600 animate-pulse"></span>
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-50 border border-rose-200/80 text-rose-600 text-xs font-black uppercase tracking-wider mb-2">
+                    <span class="w-2 h-2 rounded-full bg-rose-600 animate-ping"></span>
                     Limited-Time Hardware Discounts
-                </span>
-                <h2 class="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mt-1">Flash Deals &amp; Clearance</h2>
+                </div>
+                <h2 class="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 tracking-tight flex items-center gap-2">
+                    <span>Flash Deals &amp; Clearance</span>
+                    <span class="text-2xl">🔥</span>
+                </h2>
                 <p class="text-sm text-gray-500 mt-1">Exclusive limited-time markdowns and clearance components with instant savings</p>
             </div>
-            <div class="flex items-center gap-3">
-                <a href="{{ route('shop') }}" class="text-xs sm:text-sm font-semibold text-rose-600 hover:text-rose-700 hidden sm:inline-flex items-center gap-1 me-2">
-                    View All Deals &rarr;
+
+            <div class="flex items-center">
+                <a href="{{ route('shop') }}" class="text-xs sm:text-sm font-bold text-rose-600 hover:text-rose-700 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white border border-rose-200/90 hover:bg-rose-50 hover:border-rose-300 transition shadow-xs group">
+                    <span>View All Deals</span>
+                    <span class="group-hover:translate-x-1 transition-transform">&rarr;</span>
                 </a>
-                <div class="flex items-center gap-2">
-                    <button @click="scrollLeft()" type="button" class="w-10 h-10 rounded-xl bg-white border border-gray-200 text-gray-700 hover:text-rose-600 hover:border-rose-400 hover:shadow-md transition flex items-center justify-center shadow-xs active:scale-95" aria-label="Previous deals">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
-                    </button>
-                    <button @click="scrollRight()" type="button" class="w-10 h-10 rounded-xl bg-white border border-gray-200 text-gray-700 hover:text-rose-600 hover:border-rose-400 hover:shadow-md transition flex items-center justify-center shadow-xs active:scale-95" aria-label="Next deals">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
-                    </button>
-                </div>
             </div>
         </div>
 
         @if($topBrands->whereNotNull('logo')->isNotEmpty())
-            <!-- Quick Brand Logos Strip next to Flash Deals -->
-            <div class="flex items-center gap-2.5 overflow-x-auto pb-4 mb-6 no-scrollbar" style="scrollbar-width: none; -ms-overflow-style: none;">
+            <!-- Quick Brand Logos Strip -->
+            <div class="flex items-center gap-2 overflow-x-auto pb-4 mb-4 no-scrollbar" style="scrollbar-width: none; -ms-overflow-style: none;">
                 <span class="text-xs font-bold uppercase tracking-wider text-gray-400 shrink-0 me-1">Top Brands:</span>
                 @foreach($topBrands->whereNotNull('logo')->take(8) as $quickBrand)
                     <a href="{{ route('shop', ['brand' => $quickBrand->slug]) }}" class="shrink-0 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-gray-200/90 hover:border-rose-400 hover:shadow-xs text-xs font-bold text-gray-700 hover:text-rose-600 transition group" title="Shop {{ $quickBrand->name }}">
                         @if($quickBrand->logo_url)
-                            <img src="{{ $quickBrand->logo_url }}" alt="{{ $quickBrand->name }}" class="h-4 w-auto max-w-[48px] object-contain group-hover:scale-105 transition-transform">
+                            <img src="{{ $quickBrand->logo_url }}" alt="{{ $quickBrand->name }}" class="h-3.5 w-auto max-w-[40px] object-contain group-hover:scale-105 transition-transform">
                         @endif
                         <span>{{ $quickBrand->name }}</span>
                     </a>
@@ -374,168 +395,179 @@
             </div>
         @endif
 
-        <!-- Carousel Track with 4 full cards on desktop -->
-        <div x-ref="dealTrack" class="flex gap-5 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-4 no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0" style="scrollbar-width: none; -ms-overflow-style: none;">
-            @foreach($latestDeals as $dealProd)
-                <div class="w-[85%] sm:w-[calc(50%-10px)] lg:w-[calc(25%-15px)] shrink-0 snap-start bg-white rounded-2xl border border-rose-200/90 hover:border-rose-500 hover:shadow-xl hover:shadow-rose-500/10 transition-all duration-300 flex flex-col justify-between overflow-hidden relative group">
-                    <!-- Floating Favorite Button -->
-                    <button
-                        type="button"
-                        onclick="window.toggleFavorite({{ $dealProd->id }}, this)"
-                        data-product-id="{{ $dealProd->id }}"
-                        class="favorite-toggle-btn absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-white/95 backdrop-blur-sm border border-rose-100 text-slate-400 hover:text-rose-600 hover:bg-rose-50 hover:scale-110 flex items-center justify-center transition shadow-2xs cursor-pointer"
-                        title="Save to favorites"
-                        aria-label="Save to favorites"
-                    >
-                        <i class="bi {{ in_array($dealProd->id, $userFavoriteIds, true) ? 'bi-heart-fill text-rose-600' : 'bi-heart' }} text-xs"></i>
-                    </button>
+        <!-- Carousel Track with Relative Container & Floating Arrows -->
+        <div class="relative group/track">
+            <!-- Floating Left Navigation Arrow -->
+            <button 
+                @click="scrollLeft()" 
+                :disabled="!canScrollLeft"
+                type="button" 
+                class="hidden md:flex absolute -left-4 top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full bg-white/95 backdrop-blur-md border border-gray-200 text-gray-800 hover:text-rose-600 hover:border-rose-400 hover:scale-110 shadow-xl items-center justify-center transition-all duration-200 cursor-pointer disabled:opacity-30 disabled:scale-100 disabled:cursor-not-allowed disabled:hover:text-gray-800 disabled:hover:border-gray-200" 
+                aria-label="Previous slide"
+            >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+            </button>
 
-                    <div class="p-4 sm:p-5 flex flex-col flex-grow">
-                        <!-- Top Badges Row: Brand, Marketing Tag & Stock Status -->
-                        <div class="flex items-center justify-between gap-2 mb-3 pr-8">
-                            <div class="flex items-center gap-1.5 flex-wrap min-w-0">
-                                @if($dealProd->brand?->logo_url)
-                                    <img src="{{ $dealProd->brand->logo_url }}" alt="{{ $dealProd->brand->name }}" class="h-3.5 w-auto max-w-[36px] object-contain inline-block me-0.5">
-                                @endif
-                                <span class="text-[11px] font-extrabold text-gray-400 uppercase tracking-wider group-hover:text-rose-600 transition truncate">
+            <!-- Floating Right Navigation Arrow -->
+            <button 
+                @click="scrollRight()" 
+                :disabled="!canScrollRight"
+                type="button" 
+                class="hidden md:flex absolute -right-4 top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full bg-white/95 backdrop-blur-md border border-gray-200 text-gray-800 hover:text-rose-600 hover:border-rose-400 hover:scale-110 shadow-xl items-center justify-center transition-all duration-200 cursor-pointer disabled:opacity-30 disabled:scale-100 disabled:cursor-not-allowed disabled:hover:text-gray-800 disabled:hover:border-gray-200" 
+                aria-label="Next slide"
+            >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+            </button>
+
+            <!-- The Scrollable Track -->
+            <div 
+                x-ref="dealTrack" 
+                @scroll.passive="updateButtons()"
+                class="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory py-2 no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0" 
+                style="scrollbar-width: none; -ms-overflow-style: none;"
+            >
+                @foreach($latestDeals as $dealProd)
+                    <div class="deal-card-5col w-[220px] sm:w-[240px] md:w-[calc(33.333%-11px)] lg:w-[calc(20%-12.8px)] shrink-0 snap-start bg-white rounded-3xl border border-gray-200/90 hover:border-rose-500 hover:shadow-xl hover:shadow-rose-500/10 transition-all duration-300 flex flex-col justify-between overflow-hidden relative group/card">
+                        <!-- Floating Favorite Button -->
+                        <button
+                            type="button"
+                            onclick="window.toggleFavorite({{ $dealProd->id }}, this)"
+                            data-product-id="{{ $dealProd->id }}"
+                            class="favorite-toggle-btn absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-white/95 backdrop-blur-sm border border-gray-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 hover:scale-110 flex items-center justify-center transition shadow-2xs cursor-pointer"
+                            title="Save to favorites"
+                            aria-label="Save to favorites"
+                        >
+                            <i class="bi {{ in_array($dealProd->id, $userFavoriteIds, true) ? 'bi-heart-fill text-rose-600' : 'bi-heart' }} text-xs"></i>
+                        </button>
+
+                        <div class="p-3.5 sm:p-4 flex flex-col flex-grow">
+                            <!-- Top Brand & Stock Pill Row -->
+                            <div class="flex items-center justify-between gap-2 mb-2.5 pr-8">
+                                <span class="text-[11px] font-extrabold text-gray-400 uppercase tracking-wider group-hover/card:text-rose-600 transition truncate">
                                     {{ $dealProd->brand?->name ?? 'Hardware' }}
                                 </span>
-                                @if(!empty($dealProd->showcase_badge))
-                                    <span class="bg-rose-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full tracking-wide shadow-xs">
-                                        {{ $dealProd->showcase_badge }}
-                                    </span>
-                                @else
-                                    <span class="bg-rose-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full tracking-wide shadow-xs">
-                                        FLASH DEAL
-                                    </span>
-                                @endif
-                            </div>
 
-                            <div class="shrink-0">
-                                @if($dealProd->stock_quantity <= 0)
-                                    <span class="inline-flex items-center gap-1 text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200/80 px-2 py-0.5 rounded-full">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                                        Out of Stock
-                                    </span>
-                                @elseif($dealProd->stock_quantity <= $dealProd->low_stock_threshold)
-                                    <span class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-full">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                                        Only {{ $dealProd->stock_quantity }} Left
-                                    </span>
-                                @else
-                                    <span class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                        In Stock
-                                    </span>
-                                @endif
-                            </div>
-                        </div>
-
-                        <!-- Product Image Stage with Uniform Aspect Ratio -->
-                        <a href="{{ route('product.show', $dealProd->slug) }}" class="block relative my-1">
-                            <div class="w-full aspect-[4/3] bg-gradient-to-b from-rose-50/50 to-slate-100/50 rounded-xl border border-rose-100 flex items-center justify-center p-3 relative overflow-hidden group-hover:bg-rose-50/70 transition-colors">
-                                @if($dealProd->sale_price)
-                                    <span class="absolute top-2.5 left-2.5 z-10 inline-flex items-center gap-1 bg-rose-600 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-xs uppercase tracking-wide">
-                                        SAVE ${{ number_format($dealProd->price - $dealProd->sale_price, 0) }}
-                                    </span>
-                                @endif
-
-                                @if($dealProd->primary_image_url)
-                                    <img 
-                                        src="{{ $dealProd->primary_image_url }}" 
-                                        alt="{{ $dealProd->name }}" 
-                                        class="w-full h-full object-contain p-1 group-hover:scale-108 transition-transform duration-300 ease-out"
-                                        loading="lazy"
-                                        onerror="this.onerror=null; this.src='{{ asset('assets/images/placeholder-product.svg') }}';"
-                                    >
-                                @else
-                                    <img 
-                                        src="{{ asset('assets/images/placeholder-product.svg') }}" 
-                                        alt="{{ $dealProd->name }}" 
-                                        class="w-full h-full object-contain p-1 group-hover:scale-108 transition-transform duration-300 ease-out opacity-80"
-                                        loading="lazy"
-                                    >
-                                @endif
-                            </div>
-                        </a>
-
-                        <!-- Category & SKU Meta -->
-                        <div class="flex items-center justify-between text-[11px] text-gray-400 font-medium mt-3 mb-1">
-                            <span class="truncate">{{ $dealProd->category?->name ?? 'Components' }}</span>
-                            <span class="font-mono text-gray-400 text-[10px] shrink-0">SKU: {{ $dealProd->sku }}</span>
-                        </div>
-
-                        <!-- Clamped Title for Uniform Row Alignment -->
-                        <h3 class="font-bold text-gray-900 text-sm leading-snug group-hover:text-rose-600 transition h-10 line-clamp-2" title="{{ $dealProd->name }}">
-                            <a href="{{ route('product.show', $dealProd->slug) }}">
-                                {{ $dealProd->showcase_custom_title ?? $dealProd->name }}
-                            </a>
-                        </h3>
-
-                        <!-- Specifications Micro-Tags -->
-                        @if(!empty($dealProd->specifications))
-                            <div class="mt-2.5 flex flex-wrap gap-1.5 min-h-[26px]">
-                                @php $specCount = 0; @endphp
-                                @foreach($dealProd->specifications as $key => $val)
-                                    @if($specCount < 2)
-                                        <span class="text-[10px] font-medium bg-rose-50/70 text-gray-700 border border-rose-100 px-2 py-0.5 rounded-md">
-                                            <span class="text-gray-400">{{ $key }}:</span> <strong class="text-gray-800 font-semibold">{{ $val }}</strong>
+                                <div class="shrink-0">
+                                    @if($dealProd->stock_quantity <= 0)
+                                        <span class="inline-flex items-center gap-1 text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200/80 px-2 py-0.5 rounded-full">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                            Out of Stock
                                         </span>
-                                        @php $specCount++; @endphp
+                                    @elseif($dealProd->stock_quantity <= $dealProd->low_stock_threshold)
+                                        <span class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-full">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                            Only {{ $dealProd->stock_quantity }} Left
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                            In Stock
+                                        </span>
                                     @endif
-                                @endforeach
+                                </div>
                             </div>
-                        @else
-                            <div class="min-h-[26px]"></div>
-                        @endif
-                    </div>
 
-                    <!-- Bottom Price & Action Footer -->
-                    <div class="p-4 sm:p-5 pt-0 mt-auto border-t border-rose-100 bg-rose-50/30">
-                        <div class="flex items-baseline justify-between gap-2 pt-3 mb-3">
-                            <div class="flex items-baseline gap-2">
-                                @if($dealProd->sale_price)
-                                    <span class="text-xl font-black text-gray-900 tracking-tight">
-                                        ${{ number_format($dealProd->sale_price, 2) }}
-                                    </span>
-                                    <span class="text-xs text-gray-400 line-through">
-                                        ${{ number_format($dealProd->price, 2) }}
-                                    </span>
-                                @else
-                                    <span class="text-xl font-black text-gray-900 tracking-tight">
-                                        ${{ number_format($dealProd->price, 2) }}
+                            <!-- Product Image Stage (Compact Height) -->
+                            <a href="{{ route('product.show', $dealProd->slug) }}" class="block relative my-1">
+                                <div class="product-card-img-stage w-full rounded-xl border border-gray-100 bg-gradient-to-b from-slate-50 to-gray-100/70 p-2 relative group-hover/card:bg-rose-50/20 transition-colors" style="height: 135px; max-height: 135px;">
+                                    @if($dealProd->sale_price && $dealProd->price > $dealProd->sale_price)
+                                        <span class="absolute top-2 left-2 z-10 inline-flex items-center gap-1 bg-gradient-to-r from-rose-600 to-red-500 text-white text-[9px] font-black px-2 py-0.5 rounded shadow-xs uppercase tracking-wider">
+                                            SAVE ${{ number_format($dealProd->price - $dealProd->sale_price, 0) }}
+                                        </span>
+                                    @endif
+
+                                    @if($dealProd->primary_image_url)
+                                        <img 
+                                            src="{{ $dealProd->primary_image_url }}" 
+                                            alt="{{ $dealProd->name }}" 
+                                            class="p-1 group-hover/card:scale-108 transition-transform duration-300 ease-out"
+                                            style="max-height: 100%; max-width: 100%; width: auto; height: auto; object-fit: contain;"
+                                            loading="lazy"
+                                            onerror="this.onerror=null; this.src='{{ asset('assets/images/placeholder-product.svg') }}';"
+                                        >
+                                    @else
+                                        <img 
+                                            src="{{ asset('assets/images/placeholder-product.svg') }}" 
+                                            alt="{{ $dealProd->name }}" 
+                                            class="p-1 group-hover/card:scale-108 transition-transform duration-300 ease-out opacity-80"
+                                            style="max-height: 100%; max-width: 100%; width: auto; height: auto; object-fit: contain;"
+                                            loading="lazy"
+                                        >
+                                    @endif
+                                </div>
+                            </a>
+
+                            <!-- Category & SKU Meta -->
+                            <div class="flex items-center justify-between text-[10px] text-gray-400 font-medium mt-2 mb-1">
+                                <span class="truncate">{{ $dealProd->category?->name ?? 'Components' }}</span>
+                                <span class="font-mono text-gray-400 text-[9px] shrink-0">SKU: {{ $dealProd->sku }}</span>
+                            </div>
+
+                            <!-- Clamped Title -->
+                            <h3 class="font-bold text-gray-900 text-xs sm:text-sm leading-snug group-hover/card:text-rose-600 transition h-9 line-clamp-2" title="{{ $dealProd->name }}">
+                                <a href="{{ route('product.show', $dealProd->slug) }}">
+                                    {{ $dealProd->showcase_custom_title ?? $dealProd->name }}
+                                </a>
+                            </h3>
+                        </div>
+
+                        <!-- Bottom Price & Action Footer -->
+                        <div class="p-3 sm:p-3.5 pt-0 mt-auto border-t border-gray-100 bg-gray-50/50">
+                            <div class="flex items-baseline justify-between gap-1.5 pt-2 mb-2">
+                                <div class="flex items-baseline gap-1.5">
+                                    @if($dealProd->sale_price)
+                                        <span class="text-lg font-black text-gray-900 tracking-tight">
+                                            ${{ number_format($dealProd->sale_price, 2) }}
+                                        </span>
+                                        <span class="text-[11px] text-gray-400 line-through">
+                                            ${{ number_format($dealProd->price, 2) }}
+                                        </span>
+                                    @else
+                                        <span class="text-lg font-black text-gray-900 tracking-tight">
+                                            ${{ number_format($dealProd->price, 2) }}
+                                        </span>
+                                    @endif
+                                </div>
+
+                                @if($dealProd->sale_price && $dealProd->price > 0)
+                                    @php $pct = round((($dealProd->price - $dealProd->sale_price) / $dealProd->price) * 100); @endphp
+                                    <span class="text-[9px] font-extrabold text-rose-700 bg-rose-50 border border-rose-200/80 px-1.5 py-0.5 rounded">
+                                        -{{ $pct }}%
                                     </span>
                                 @endif
                             </div>
 
-                            @if($dealProd->sale_price && $dealProd->price > 0)
-                                @php $pct = round((($dealProd->price - $dealProd->sale_price) / $dealProd->price) * 100); @endphp
-                                <span class="text-[10px] font-extrabold text-rose-700 bg-rose-50 border border-rose-200/80 px-1.5 py-0.5 rounded-md">
-                                    -{{ $pct }}%
-                                </span>
-                            @endif
-                        </div>
-
-                        <div class="grid grid-cols-5 gap-2">
-                            <a href="{{ route('product.show', $dealProd->slug) }}" class="col-span-2 py-2 px-3 text-xs font-bold text-gray-700 bg-white hover:bg-gray-100 hover:text-gray-900 rounded-xl transition flex items-center justify-center border border-gray-300 shadow-2xs" title="View Full Specs">
-                                Details
-                            </a>
-                            <form action="{{ route('cart.add', $dealProd->id) }}" method="POST" class="col-span-3">
-                                @csrf
-                                <input type="hidden" name="quantity" value="1">
-                                <button
-                                    type="submit"
-                                    @if($dealProd->stock_quantity <= 0) disabled @endif
-                                    class="w-full py-2 px-3 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition flex items-center justify-center gap-1.5 shadow-xs active:scale-[0.98]"
-                                >
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
-                                    <span>Add</span>
-                                </button>
-                            </form>
+                            <div class="grid grid-cols-5 gap-1.5">
+                                <a href="{{ route('product.show', $dealProd->slug) }}" class="col-span-2 py-1.5 px-2 text-xs font-bold text-gray-700 bg-white hover:bg-gray-100 hover:text-gray-900 rounded-lg transition flex items-center justify-center border border-gray-300 shadow-2xs" title="View Full Specs">
+                                    Details
+                                </a>
+                                <form action="{{ route('cart.add', $dealProd->id) }}" method="POST" class="col-span-3">
+                                    @csrf
+                                    <input type="hidden" name="quantity" value="1">
+                                    <button
+                                        type="submit"
+                                        @if($dealProd->stock_quantity <= 0) disabled @endif
+                                        class="w-full py-1.5 px-2 text-xs font-bold text-white bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 rounded-lg transition flex items-center justify-center gap-1 shadow-sm shadow-rose-600/25 active:scale-[0.98] cursor-pointer"
+                                    >
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+                                        <span>Add</span>
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     </div>
-                </div>
-            @endforeach
+                @endforeach
+            </div>
+        </div>
+
+        <!-- Carousel Track Progress Bar Indicator -->
+        <div class="mt-6 flex items-center justify-center gap-3">
+            <div class="w-28 h-1.5 rounded-full bg-gray-200 overflow-hidden">
+                <div class="h-full bg-gradient-to-r from-rose-500 to-red-600 rounded-full transition-all duration-300" :style="`width: ${scrollProgress}%;`"></div>
+            </div>
+            <span class="text-[11px] font-bold text-gray-400">
+                <span x-text="currentIndex">1</span> of {{ $latestDeals->count() }} deals
+            </span>
         </div>
     </div>
 </section>

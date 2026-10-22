@@ -307,9 +307,9 @@
 
                             <!-- Product Image Container -->
                             <a href="{{ route('product.show', $product->slug) }}" class="block relative my-1">
-                                <div class="w-full aspect-[4/3] bg-slate-50/90 rounded-xl border border-slate-100 flex items-center justify-center p-3 relative overflow-hidden group-hover:bg-blue-50/20 transition-colors">
+                                <div class="product-card-img-stage w-full bg-slate-50/90 rounded-xl border border-slate-100 p-3 relative group-hover:bg-blue-50/20 transition-colors" style="height: 175px; max-height: 175px;">
                                     @if($product->sale_price && $product->price > $product->sale_price)
-                                        <span class="absolute top-2.5 left-2.5 z-10 inline-flex items-center gap-1 bg-gradient-to-r from-rose-600 to-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-xs uppercase tracking-wider">
+                                        <span class="absolute top-2.5 left-2.5 z-10 inline-flex items-center gap-1 bg-gradient-to-r from-rose-600 to-red-500 text-white text-[10px] font-black px-2.5 py-0.5 rounded-md shadow-xs uppercase tracking-wider">
                                             <i class="bi bi-tag-fill text-[9px]"></i>
                                             SAVE ${{ number_format($product->price - $product->sale_price, 0) }}
                                         </span>
@@ -319,7 +319,8 @@
                                         <img 
                                             src="{{ $product->primary_image_url }}" 
                                             alt="{{ $product->name }}" 
-                                            class="w-full h-full object-contain p-1 group-hover:scale-105 transition-transform duration-300 ease-out"
+                                            class="p-1 group-hover:scale-105 transition-transform duration-300 ease-out"
+                                            style="max-height: 100%; max-width: 100%; width: auto; height: auto; object-fit: contain;"
                                             loading="lazy"
                                             onerror="this.onerror=null; this.src='{{ asset('assets/images/placeholder-product.svg') }}';"
                                         >
@@ -327,7 +328,8 @@
                                         <img 
                                             src="{{ asset('assets/images/placeholder-product.svg') }}" 
                                             alt="{{ $product->name }}" 
-                                            class="w-full h-full object-contain p-1 group-hover:scale-105 transition-transform duration-300 ease-out opacity-80"
+                                            class="p-1 group-hover:scale-105 transition-transform duration-300 ease-out opacity-80"
+                                            style="max-height: 100%; max-width: 100%; width: auto; height: auto; object-fit: contain;"
                                             loading="lazy"
                                         >
                                     @endif
