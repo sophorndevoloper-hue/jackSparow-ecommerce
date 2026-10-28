@@ -39,3 +39,13 @@ Route::middleware('auth:backend,frontend')->group(function () {
         return redirect()->route('customer.profile');
     })->name('profile.edit');
 });
+
+// Storage fallback route: serves public disk files when the storage symlink is missing or disabled on hosting
+Route::get('/storage/{path}', function (string $path) {
+    $disk = \Illuminate\Support\Facades\Storage::disk('public');
+    if (! $disk->exists($path)) {
+        abort(404);
+    }
+
+    return $disk->response($path);
+})->where('path', '.*')->name('storage.fallback');

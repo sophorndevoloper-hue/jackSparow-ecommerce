@@ -1,2 +1,12 @@
 *
 !.gitignore
+!products/
+!products/*
+!brands/
+!brands/*
+!avatars/
+!avatars/*
+!makes/
+!makes/*
+!collections/
+!collections/*

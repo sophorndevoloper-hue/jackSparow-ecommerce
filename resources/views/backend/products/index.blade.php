@@ -142,7 +142,7 @@
                                              onmouseover="this.style.transform='scale(1.06)'"
                                              onmouseout="this.style.transform='scale(1)'">
                                             @if($product->primary_image_url)
-                                                <img src="{{ $product->primary_image_url }}" alt="{{ $product->name }}" class="w-100 h-100 object-fit-cover">
+                                                <img src="{{ $product->primary_image_url }}" alt="{{ $product->name }}" class="w-100 h-100 object-fit-cover" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\'bi bi-cpu fs-5 text-primary\'></i>';">
                                             @else
                                                 <i class="bi bi-cpu fs-5 text-primary"></i>
                                             @endif
@@ -469,7 +469,7 @@
                 thumb.className = `border rounded overflow-hidden p-1 bg-white cursor-pointer gallery-thumb-item ${idx === currentImageIndex ? 'border-primary border-3 shadow-sm' : 'opacity-75'}`;
                 thumb.style.cssText = 'width: 58px; height: 58px; cursor: pointer; transition: all 0.15s ease;';
                 thumb.onclick = () => displayGalleryImage(idx);
-                thumb.innerHTML = `<img src="${img.url}" alt="Thumb" class="w-100 h-100 object-fit-cover rounded">`;
+                thumb.innerHTML = `<img src="${img.url}" alt="Thumb" class="w-100 h-100 object-fit-cover rounded" onerror="this.onerror=null; this.src='{{ asset('assets/images/placeholder-product.svg') }}';">`;
                 strip.appendChild(thumb);
             });
         }
@@ -485,6 +485,10 @@
 
             const mainImg = document.getElementById('galleryMainImage');
             mainImg.style.opacity = '0.3';
+            mainImg.onerror = function() {
+                this.onerror = null;
+                this.src = '{{ asset('assets/images/placeholder-product.svg') }}';
+            };
             setTimeout(() => {
                 mainImg.src = imgData.url;
                 mainImg.style.opacity = '1';

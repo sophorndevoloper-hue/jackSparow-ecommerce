@@ -176,7 +176,7 @@
                                     <div class="d-flex align-items-center gap-2 overflow-hidden me-2">
                                         <div class="rounded bg-light border overflow-hidden d-flex align-items-center justify-content-center flex-shrink-0" style="width: 34px; height: 34px;">
                                             @if($p->primary_image_url)
-                                                <img src="{{ $p->primary_image_url }}" alt="{{ $p->name }}" class="w-100 h-100 object-fit-cover">
+                                                <img src="{{ $p->primary_image_url }}" alt="{{ $p->name }}" class="w-100 h-100 object-fit-cover" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\'bi bi-cpu text-primary small\'></i>';">
                                             @else
                                                 <i class="bi bi-cpu text-primary small"></i>
                                             @endif

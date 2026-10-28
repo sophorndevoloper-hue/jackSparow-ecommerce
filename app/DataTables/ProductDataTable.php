@@ -21,7 +21,7 @@ class ProductDataTable extends DataTable
         return (new EloquentDataTable($query))
             ->editColumn('name', function (Product $p) {
                 $img = $p->primary_image_url
-                    ? '<img src="'.e($p->primary_image_url).'" alt="'.e($p->name).'" class="w-100 h-100 object-fit-cover">'
+                    ? '<img src="'.e($p->primary_image_url).'" alt="'.e($p->name).'" class="w-100 h-100 object-fit-cover" onerror="this.onerror=null; this.parentElement.innerHTML=\'<i class=\\\'bi bi-cpu fs-5 text-primary\\\'></i>\';">'
                     : '<i class="bi bi-cpu fs-5 text-primary"></i>';
 
                 return '

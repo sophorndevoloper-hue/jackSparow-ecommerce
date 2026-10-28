@@ -98,7 +98,7 @@
                                     <div class="d-flex align-items-center gap-2">
                                         <div class="rounded bg-light border overflow-hidden d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; min-width: 40px;">
                                             @if($product->primary_image_url)
-                                                <img src="{{ $product->primary_image_url }}" alt="{{ $product->name }}" class="w-100 h-100 object-fit-cover">
+                                                <img src="{{ $product->primary_image_url }}" alt="{{ $product->name }}" class="w-100 h-100 object-fit-cover" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\'bi bi-cpu fs-5 text-primary\'></i>';">
                                             @else
                                                 <i class="bi bi-cpu fs-5 text-primary"></i>
                                             @endif

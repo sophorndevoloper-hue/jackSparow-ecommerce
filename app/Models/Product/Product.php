@@ -172,19 +172,27 @@ class Product extends Model
      */
     public function getPrimaryImageUrlAttribute(): ?string
     {
-        if ($this->relationLoaded('primaryImage') && $this->primaryImage) {
+        if ($this->relationLoaded('primaryImage') && $this->primaryImage && ! empty($this->primaryImage->image_path)) {
             return $this->primaryImage->image_url;
         }
 
         if ($this->relationLoaded('images') && $this->images->isNotEmpty()) {
             $primary = $this->images->firstWhere('is_primary', true) ?: $this->images->first();
 
-            return $primary?->image_url;
+            return ($primary && ! empty($primary->image_path)) ? $primary->image_url : null;
         }
 
         $primary = $this->primaryImage ?: $this->images->first();
 
-        return $primary ? $primary->image_url : null;
+        return ($primary && ! empty($primary->image_path)) ? $primary->image_url : null;
+    }
+
+    /**
+     * Alias for primary_image_url to ensure compatibility with views expecting image_url.
+     */
+    public function getImageUrlAttribute(): ?string
+    {
+        return $this->primary_image_url;
     }
 
     /**

@@ -273,12 +273,15 @@
                         <div class="flex items-center gap-3.5 min-w-0">
                             <div
                                 class="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-center shrink-0 overflow-hidden p-1">
-                                @if(!empty($item->product?->image_url))
+                                @if(!empty($item->product?->primary_image_url))
+                                <img src="{{ $item->product->primary_image_url }}" alt="{{ $item->product_name }}"
+                                    class="w-full h-full object-contain" onerror="this.onerror=null; this.src='{{ asset('assets/images/placeholder-product.svg') }}';">
+                                @elseif(!empty($item->product?->image_url))
                                 <img src="{{ $item->product->image_url }}" alt="{{ $item->product_name }}"
-                                    class="w-full h-full object-contain">
+                                    class="w-full h-full object-contain" onerror="this.onerror=null; this.src='{{ asset('assets/images/placeholder-product.svg') }}';">
                                 @elseif(!empty($item->product?->image))
                                 <img src="{{ asset('storage/' . ltrim($item->product->image, '/')) }}"
-                                    alt="{{ $item->product_name }}" class="w-full h-full object-contain">
+                                    alt="{{ $item->product_name }}" class="w-full h-full object-contain" onerror="this.onerror=null; this.src='{{ asset('assets/images/placeholder-product.svg') }}';">
                                 @else
                                 <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor"
                                     viewBox="0 0 24 24">

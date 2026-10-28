@@ -207,3 +207,37 @@ it('allows admin to save gallery with batch new uploads, removals, and primary s
     expect($newImgRecord->is_primary)->toBeTrue();
     Storage::disk('public')->assertExists($newImgRecord->image_path);
 });
+
+it('serves files via the storage fallback route when storage symlink is not used', function () {
+    Storage::disk('public')->put('products/sample_test.jpg', 'fake-image-binary-data');
+
+    $response = $this->get('/storage/products/sample_test.jpg');
+
+    $response->assertStatus(200);
+    expect($response->getContent())->toBe('fake-image-binary-data');
+
+    $missingResponse = $this->get('/storage/products/non_existent.jpg');
+    $missingResponse->assertStatus(404);
+});
+
+it('correctly resolves image_url alias on product and handles null image paths', function () {
+    $category = Category::factory()->create();
+    $product = Product::factory()->create(['category_id' => $category->id]);
+
+    expect($product->primary_image_url)->toBeNull();
+    expect($product->image_url)->toBeNull();
+
+    ProductImage::create([
+        'product_id' => $product->id,
+        'image_path' => 'products/test_photo.jpg',
+        'is_primary' => true,
+    ]);
+
+    $product->refresh();
+    expect($product->primary_image_url)->toContain('storage/products/test_photo.jpg');
+    expect($product->image_url)->toBe($product->primary_image_url);
+
+    // Empty image path should return null
+    $emptyImg = new ProductImage(['image_path' => '']);
+    expect($emptyImg->image_url)->toBeNull();
+});
