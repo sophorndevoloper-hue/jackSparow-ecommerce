@@ -5,7 +5,7 @@
 @section('content')
 <!-- Catalog Header & Breadcrumb -->
 <div class="bg-white border-b border-gray-200 py-6">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl 2xl:max-w-[1536px] mx-auto px-4 sm:px-6 lg:px-8">
         <nav class="text-xs text-gray-500 mb-2 flex items-center gap-2">
             <a href="{{ route('home') }}" class="hover:text-blue-600 transition">Home</a>
             <span>/</span>
@@ -34,9 +34,16 @@
             </div>
 
             <!-- Active Filters Quick Bar -->
-            @if(request('category') || request('brand') || request('collection') || request('search') || request('in_stock') || request('min_price') || request('max_price'))
+            @if(request('category') || request('brand') || request('search') || request('in_stock') || request('min_price') || request('max_price'))
                 <div class="flex flex-wrap items-center gap-2">
                     <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Active:</span>
+
+                    @if(request('search'))
+                        <a href="{{ request()->fullUrlWithQuery(['search' => null]) }}" class="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-300 rounded-full text-xs font-semibold transition">
+                            <span>Search: "{{ request('search') }}"</span>
+                            <span class="text-gray-500 hover:text-gray-800 text-sm leading-none">&times;</span>
+                        </a>
+                    @endif
 
                     @if(request('category'))
                         <a href="{{ request()->fullUrlWithQuery(['category' => null]) }}" class="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-full text-xs font-semibold transition">
@@ -49,21 +56,6 @@
                         <a href="{{ request()->fullUrlWithQuery(['brand' => null]) }}" class="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-full text-xs font-semibold transition">
                             <span>Brand: {{ strtoupper(request('brand')) }}</span>
                             <span class="text-blue-500 hover:text-blue-800 text-sm leading-none">&times;</span>
-                        </a>
-                    @endif
-
-
-                    @if(request('collection'))
-                        <a href="{{ request()->fullUrlWithQuery(['collection' => null]) }}" class="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-full text-xs font-semibold transition">
-                            <span>Collection: {{ ucwords(str_replace('-', ' ', request('collection'))) }}</span>
-                            <span class="text-indigo-500 hover:text-indigo-800 text-sm leading-none">&times;</span>
-                        </a>
-                    @endif
-
-                    @if(request('search'))
-                        <a href="{{ request()->fullUrlWithQuery(['search' => null]) }}" class="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-300 rounded-full text-xs font-semibold transition">
-                            <span>Search: "{{ request('search') }}"</span>
-                            <span class="text-gray-500 hover:text-gray-800 text-sm leading-none">&times;</span>
                         </a>
                     @endif
 
@@ -84,137 +76,230 @@
 </div>
 
 <!-- Main Catalog Layout Container -->
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<div class="max-w-7xl 2xl:max-w-[1536px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="flex flex-col md:flex-row gap-8 items-start">
 
         <!-- Sidebar Filters -->
-        <aside class="w-full md:w-64 lg:w-72 shrink-0 md:sticky md:top-28 md:self-start md:max-h-[calc(100vh-8rem)] md:overflow-y-auto pr-0.5">
-            <form action="{{ route('shop') }}" method="GET" class="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs space-y-6">
-                @if(request('search'))
-                    <input type="hidden" name="search" value="{{ request('search') }}">
-                @endif
+        <aside class="w-full md:w-64 lg:w-72 shrink-0 md:sticky md:top-24 md:self-start md:max-h-[calc(100vh-5rem)] md:overflow-y-auto no-scrollbar" style="scrollbar-width: none; -ms-overflow-style: none;">
+            <style>
+                .sidebar-custom-scroll::-webkit-scrollbar { width: 5px; }
+                .sidebar-custom-scroll::-webkit-scrollbar-track { background: transparent; }
+                .sidebar-custom-scroll::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 9999px; }
+                .sidebar-custom-scroll::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+                .no-scrollbar::-webkit-scrollbar { display: none; }
+            </style>
+            <form action="{{ route('shop') }}" method="GET" class="bg-white p-4.5 rounded-2xl border border-gray-200/90 shadow-xs space-y-4">
                 @if(!empty($sort) && $sort !== 'newest')
                     <input type="hidden" name="sort" value="{{ $sort }}">
                 @endif
 
+                {{-- Retain active search query from top navbar --}}
+                @if(request('search'))
+                    <input type="hidden" name="search" value="{{ request('search') }}">
+                @endif
+
+                <!-- Sidebar Header -->
                 <div class="flex items-center justify-between pb-3 border-b border-gray-100">
                     <h2 class="font-extrabold text-gray-900 text-sm flex items-center gap-2">
                         <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
                         Filter Hardware
                     </h2>
-                    @if(request('category') || request('brand') || request('in_stock') || request('min_price') || request('max_price'))
-                        <a href="{{ route('shop') }}" class="text-xs font-semibold text-rose-600 hover:underline">Reset</a>
+                    @if(request('category') || request('brand') || request('search') || request('in_stock') || request('min_price') || request('max_price'))
+                        <a href="{{ route('shop') }}" class="text-xs font-semibold text-rose-600 hover:underline">Reset All</a>
                     @endif
                 </div>
 
-                <!-- Categories Filter -->
-                <div>
-                    <span class="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2.5">Category</span>
-                    <div class="space-y-1 max-h-60 overflow-y-auto pr-1">
-                        <label class="group flex items-center justify-between px-3 py-2 rounded-xl text-xs cursor-pointer transition {{ !request('category') ? 'bg-blue-600 text-white font-bold shadow-xs' : 'text-gray-700 hover:bg-gray-100' }}">
-                            <span class="flex items-center gap-2">
+                <!-- Category Filter with In-Filter Search -->
+                <div x-data="{ 
+                    catSearch: '', 
+                    matches(name) { 
+                        return !this.catSearch || name.toLowerCase().includes(this.catSearch.toLowerCase().trim()); 
+                    } 
+                }">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-gray-500">Category</span>
+                        <span class="text-[10px] text-gray-400 font-semibold" x-show="!catSearch">{{ $categories->count() }} total</span>
+                        <span class="text-[10px] text-blue-600 font-semibold" x-show="catSearch" style="display: none;">searching...</span>
+                    </div>
+
+                    <!-- Category Live Search Input (Always Pinned Above List) -->
+                    <div class="relative mb-2">
+                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2.5">
+                            <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                        </div>
+                        <input 
+                            type="text" 
+                            x-model="catSearch" 
+                            @keydown.enter.prevent
+                            placeholder="Search categories..." 
+                            style="padding-left: 2.15rem !important; padding-right: 1.75rem !important;"
+                            class="w-full text-xs py-1.5 bg-gray-50 hover:bg-white focus:bg-white border border-gray-200 focus:border-blue-500 rounded-lg focus:ring-1 focus:ring-blue-500 text-gray-800 placeholder-gray-400 transition"
+                        >
+                        <button 
+                            type="button" 
+                            x-show="catSearch.length > 0" 
+                            @click="catSearch = ''" 
+                            class="absolute inset-y-0 right-0 flex items-center pr-2 text-gray-400 hover:text-gray-600 text-sm font-bold leading-none cursor-pointer"
+                            style="display: none;"
+                        >&times;</button>
+                    </div>
+
+                    <!-- Category Items List (Constrained scrollbox) -->
+                    <div 
+                        style="max-height: 185px; overflow-y: auto;" 
+                        class="sidebar-custom-scroll space-y-0.5 pr-1"
+                    >
+                        <label 
+                            x-show="!catSearch"
+                            class="group flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs cursor-pointer transition {{ !request('category') ? 'bg-blue-600 text-white font-bold shadow-xs' : 'text-gray-700 hover:bg-gray-50 hover:text-blue-600' }}"
+                        >
+                            <span class="flex items-center gap-2 truncate">
                                 <input type="radio" name="category" value="" {{ !request('category') ? 'checked' : '' }} onchange="this.form.submit()" class="hidden">
-                                <span class="w-2 h-2 rounded-full {{ !request('category') ? 'bg-white' : 'bg-gray-300' }}"></span>
-                                <span>All Categories</span>
+                                <span class="w-1.5 h-1.5 rounded-full shrink-0 {{ !request('category') ? 'bg-white' : 'bg-gray-300 group-hover:bg-blue-400' }}"></span>
+                                <span class="truncate">All Categories</span>
                             </span>
-                            <span class="text-[11px] px-2 py-0.5 rounded-full {{ !request('category') ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500' }}">
+                            <span class="text-[10px] px-1.5 py-0.5 rounded-full shrink-0 ml-1 {{ !request('category') ? 'bg-white/20 text-white font-semibold' : 'bg-gray-100 text-gray-500 font-medium group-hover:bg-blue-50 group-hover:text-blue-600' }}">
                                 {{ $categories->sum('products_count') }}
                             </span>
                         </label>
 
                         @foreach($categories as $cat)
-                            @php $isActive = request('category') === $cat->slug; @endphp
-                            <label class="group flex items-center justify-between px-3 py-2 rounded-xl text-xs cursor-pointer transition {{ $isActive ? 'bg-blue-600 text-white font-bold shadow-xs' : 'text-gray-700 hover:bg-gray-100' }}">
+                            @php 
+                                $isActive = request('category') === $cat->slug; 
+                                $hasProducts = $cat->products_count > 0;
+                            @endphp
+                            <label 
+                                x-show="matches('{{ addslashes($cat->name) }}')"
+                                class="group flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs cursor-pointer transition {{ $isActive ? 'bg-blue-600 text-white font-bold shadow-xs' : ($hasProducts ? 'text-gray-700 hover:bg-gray-50 hover:text-blue-600' : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600') }}"
+                            >
                                 <span class="flex items-center gap-2 truncate">
                                     <input type="radio" name="category" value="{{ $cat->slug }}" {{ $isActive ? 'checked' : '' }} onchange="this.form.submit()" class="hidden">
-                                    <span class="w-2 h-2 rounded-full shrink-0 {{ $isActive ? 'bg-white' : 'bg-gray-300' }}"></span>
+                                    <span class="w-1.5 h-1.5 rounded-full shrink-0 {{ $isActive ? 'bg-white' : ($hasProducts ? 'bg-gray-300 group-hover:bg-blue-400' : 'bg-gray-200') }}"></span>
                                     <span class="truncate">{{ $cat->name }}</span>
                                 </span>
-                                <span class="text-[11px] px-2 py-0.5 rounded-full shrink-0 ml-1 {{ $isActive ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500' }}">
+                                <span class="text-[10px] px-1.5 py-0.5 rounded-full shrink-0 ml-1 {{ $isActive ? 'bg-white/20 text-white font-semibold' : ($hasProducts ? 'bg-gray-100 text-gray-600 font-medium group-hover:bg-blue-50 group-hover:text-blue-600' : 'bg-gray-50 text-gray-400 font-normal') }}">
                                     {{ $cat->products_count }}
                                 </span>
                             </label>
                         @endforeach
+
+                        <p x-show="catSearch && {{ json_encode($categories->pluck('name')->toArray()) }}.filter(n => n.toLowerCase().includes(catSearch.toLowerCase().trim())).length === 0" class="py-2.5 text-center text-xs text-gray-400 font-medium" style="display: none;">
+                            No matching category
+                        </p>
                     </div>
                 </div>
 
-                <!-- Brands Filter -->
-                <div class="pt-4 border-t border-gray-100">
-                    <span class="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2.5">Manufacturer / Brand</span>
-                    <div class="space-y-1 max-h-60 overflow-y-auto pr-1">
-                        <label class="group flex items-center justify-between px-3 py-2 rounded-xl text-xs cursor-pointer transition {{ !request('brand') ? 'bg-blue-600 text-white font-bold shadow-xs' : 'text-gray-700 hover:bg-gray-100' }}">
-                            <span class="flex items-center gap-2">
+                <!-- Brand Filter with In-Filter Search -->
+                <div x-data="{ 
+                    brandSearch: '', 
+                    matches(name) { 
+                        return !this.brandSearch || name.toLowerCase().includes(this.brandSearch.toLowerCase().trim()); 
+                    } 
+                }" class="pt-3.5 border-t border-gray-100">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-gray-500">Manufacturer / Brand</span>
+                        <span class="text-[10px] text-gray-400 font-semibold" x-show="!brandSearch">{{ $brands->count() }} total</span>
+                        <span class="text-[10px] text-blue-600 font-semibold" x-show="brandSearch" style="display: none;">searching...</span>
+                    </div>
+
+                    <!-- Brand Live Search Input (Always Pinned Above List) -->
+                    <div class="relative mb-2">
+                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2.5">
+                            <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                        </div>
+                        <input 
+                            type="text" 
+                            x-model="brandSearch" 
+                            @keydown.enter.prevent
+                            placeholder="Search brands..." 
+                            style="padding-left: 2.15rem !important; padding-right: 1.75rem !important;"
+                            class="w-full text-xs py-1.5 bg-gray-50 hover:bg-white focus:bg-white border border-gray-200 focus:border-blue-500 rounded-lg focus:ring-1 focus:ring-blue-500 text-gray-800 placeholder-gray-400 transition"
+                        >
+                        <button 
+                            type="button" 
+                            x-show="brandSearch.length > 0" 
+                            @click="brandSearch = ''" 
+                            class="absolute inset-y-0 right-0 flex items-center pr-2 text-gray-400 hover:text-gray-600 text-sm font-bold leading-none cursor-pointer"
+                            style="display: none;"
+                        >&times;</button>
+                    </div>
+
+                    <!-- Brand Items List (Constrained scrollbox) -->
+                    <div 
+                        style="max-height: 185px; overflow-y: auto;" 
+                        class="sidebar-custom-scroll space-y-0.5 pr-1"
+                    >
+                        <label 
+                            x-show="!brandSearch"
+                            class="group flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs cursor-pointer transition {{ !request('brand') ? 'bg-blue-600 text-white font-bold shadow-xs' : 'text-gray-700 hover:bg-gray-50 hover:text-blue-600' }}"
+                        >
+                            <span class="flex items-center gap-2 truncate">
                                 <input type="radio" name="brand" value="" {{ !request('brand') ? 'checked' : '' }} onchange="this.form.submit()" class="hidden">
-                                <span class="w-2 h-2 rounded-full {{ !request('brand') ? 'bg-white' : 'bg-gray-300' }}"></span>
-                                <span>All Brands</span>
+                                <span class="w-1.5 h-1.5 rounded-full shrink-0 {{ !request('brand') ? 'bg-white' : 'bg-gray-300 group-hover:bg-blue-400' }}"></span>
+                                <span class="truncate">All Brands</span>
                             </span>
                         </label>
 
                         @foreach($brands as $brand)
-                            @php $isActive = request('brand') === $brand->slug; @endphp
-                            <label class="group flex items-center justify-between px-3 py-2 rounded-xl text-xs cursor-pointer transition {{ $isActive ? 'bg-blue-600 text-white font-bold shadow-xs' : 'text-gray-700 hover:bg-gray-100' }}">
+                            @php 
+                                $isActive = request('brand') === $brand->slug; 
+                                $hasProducts = $brand->products_count > 0;
+                            @endphp
+                            <label 
+                                x-show="matches('{{ addslashes($brand->name) }}')"
+                                class="group flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs cursor-pointer transition {{ $isActive ? 'bg-blue-600 text-white font-bold shadow-xs' : ($hasProducts ? 'text-gray-700 hover:bg-gray-50 hover:text-blue-600' : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600') }}"
+                            >
                                 <span class="flex items-center gap-2 truncate">
                                     <input type="radio" name="brand" value="{{ $brand->slug }}" {{ $isActive ? 'checked' : '' }} onchange="this.form.submit()" class="hidden">
-                                    <span class="w-2 h-2 rounded-full shrink-0 {{ $isActive ? 'bg-white' : 'bg-gray-300' }}"></span>
+                                    <span class="w-1.5 h-1.5 rounded-full shrink-0 {{ $isActive ? 'bg-white' : ($hasProducts ? 'bg-gray-300 group-hover:bg-blue-400' : 'bg-gray-200') }}"></span>
                                     <span class="truncate">{{ $brand->name }}</span>
                                 </span>
-                                <span class="text-[11px] px-2 py-0.5 rounded-full shrink-0 ml-1 {{ $isActive ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500' }}">
+                                <span class="text-[10px] px-1.5 py-0.5 rounded-full shrink-0 ml-1 {{ $isActive ? 'bg-white/20 text-white font-semibold' : ($hasProducts ? 'bg-gray-100 text-gray-600 font-medium group-hover:bg-blue-50 group-hover:text-blue-600' : 'bg-gray-50 text-gray-400 font-normal') }}">
                                     {{ $brand->products_count }}
                                 </span>
                             </label>
                         @endforeach
+
+                        <p x-show="brandSearch && {{ json_encode($brands->pluck('name')->toArray()) }}.filter(n => n.toLowerCase().includes(brandSearch.toLowerCase().trim())).length === 0" class="py-2.5 text-center text-xs text-gray-400 font-medium" style="display: none;">
+                            No matching brand
+                        </p>
                     </div>
                 </div>
 
-
-                <!-- Product Collection Filter -->
-                @if(isset($collections) && $collections->isNotEmpty())
-                    <div class="pt-4 border-t border-gray-100">
-                        <span class="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2.5">Product Collection</span>
-                        <div class="space-y-1 max-h-52 overflow-y-auto pr-1">
-                            <label class="group flex items-center justify-between px-3 py-2 rounded-xl text-xs cursor-pointer transition {{ !request('collection') ? 'bg-indigo-600 text-white font-bold shadow-xs' : 'text-gray-700 hover:bg-gray-100' }}">
-                                <span class="flex items-center gap-2">
-                                    <input type="radio" name="collection" value="" {{ !request('collection') ? 'checked' : '' }} onchange="this.form.submit()" class="hidden">
-                                    <span class="w-2 h-2 rounded-full {{ !request('collection') ? 'bg-white' : 'bg-gray-300' }}"></span>
-                                    <span>All Collections</span>
-                                </span>
-                            </label>
-
-                            @foreach($collections as $col)
-                                @php $isActive = request('collection') === $col->slug; @endphp
-                                <label class="group flex items-center justify-between px-3 py-2 rounded-xl text-xs cursor-pointer transition {{ $isActive ? 'bg-indigo-600 text-white font-bold shadow-xs' : 'text-gray-700 hover:bg-gray-100' }}">
-                                    <span class="flex items-center gap-2 truncate">
-                                        <input type="radio" name="collection" value="{{ $col->slug }}" {{ $isActive ? 'checked' : '' }} onchange="this.form.submit()" class="hidden">
-                                        <span class="w-2 h-2 rounded-full shrink-0 {{ $isActive ? 'bg-white' : 'bg-gray-300' }}"></span>
-                                        <span class="truncate">{{ $col->name }}</span>
-                                    </span>
-                                    <span class="text-[11px] px-2 py-0.5 rounded-full shrink-0 ml-1 {{ $isActive ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500' }}">
-                                        {{ $col->products_count }}
-                                    </span>
-                                </label>
-                            @endforeach
-                        </div>
-                    </div>
-                @endif
-
                 <!-- Stock Availability -->
-                <div class="pt-4 border-t border-gray-100">
-                    <span class="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2">Availability</span>
-                    <label class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs cursor-pointer hover:bg-gray-50 transition border border-gray-200">
-                        <input type="checkbox" name="in_stock" value="1" {{ request('in_stock') ? 'checked' : '' }} onchange="this.form.submit()" class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300">
-                        <span class="font-semibold text-gray-800">In Stock Ready to Ship</span>
+                <div class="pt-3.5 border-t border-gray-100">
+                    <span class="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-2">Availability</span>
+                    <label class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs cursor-pointer transition border {{ request('in_stock') ? 'bg-blue-50/70 border-blue-200 text-blue-900 font-semibold' : 'border-gray-200 text-gray-700 hover:bg-gray-50' }}">
+                        <input type="checkbox" name="in_stock" value="1" {{ request('in_stock') ? 'checked' : '' }} onchange="this.form.submit()" class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300 cursor-pointer">
+                        <span>In Stock Ready to Ship</span>
                     </label>
                 </div>
 
                 <!-- Price Range -->
-                <div class="pt-4 border-t border-gray-100">
-                    <span class="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2">Price Range ($)</span>
-                    <div class="grid grid-cols-2 gap-2">
-                        <input type="number" name="min_price" value="{{ request('min_price') }}" placeholder="Min $" class="w-full text-xs px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500">
-                        <input type="number" name="max_price" value="{{ request('max_price') }}" placeholder="Max $" class="w-full text-xs px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500">
+                <div class="pt-3.5 border-t border-gray-100">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-gray-500">Price Range ($)</span>
+                        @if(request('min_price') || request('max_price'))
+                            <a href="{{ request()->fullUrlWithQuery(['min_price' => null, 'max_price' => null]) }}" class="text-[10px] text-rose-600 hover:underline font-semibold">Clear</a>
+                        @endif
                     </div>
-                    <button type="submit" class="w-full mt-2.5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white text-xs font-bold rounded-xl transition shadow-xs">
-                        Filter Price
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="relative">
+                            <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-semibold">$</span>
+                            <input type="number" name="min_price" value="{{ request('min_price') }}" placeholder="Min" min="0" class="w-full text-xs pl-5 pr-2 py-1.5 bg-gray-50 hover:bg-white focus:bg-white border border-gray-200 rounded-lg focus:ring-1 focus:ring-blue-500 text-gray-800 placeholder-gray-400 transition">
+                        </div>
+                        <div class="relative">
+                            <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-semibold">$</span>
+                            <input type="number" name="max_price" value="{{ request('max_price') }}" placeholder="Max" min="0" class="w-full text-xs pl-5 pr-2 py-1.5 bg-gray-50 hover:bg-white focus:bg-white border border-gray-200 rounded-lg focus:ring-1 focus:ring-blue-500 text-gray-800 placeholder-gray-400 transition">
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full mt-2.5 py-2 bg-gray-900 hover:bg-blue-600 text-white text-xs font-bold rounded-lg transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer">
+                        <span>Apply Price</span>
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                     </button>
                 </div>
             </form>
@@ -259,13 +344,13 @@
                 </form>
             </div>
 
-            <!-- Product Grid: 1 col on mobile, 2 cols on tablet, 3 cols on desktop -->
+            <!-- Product Grid: 1 col on mobile, 2 cols on tablet, 3 cols on desktop, 4 cols on large desktop -->
             @php
                 $userFavoriteIds = \App\Models\Favorite::getFavoriteIds();
             @endphp
-            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-4.5">
                 @forelse($products as $product)
-                    <div class="group bg-white rounded-2xl border border-slate-200 hover:border-blue-500 hover:shadow-xl hover:shadow-blue-500/10 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between overflow-hidden relative">
+                    <div class="group bg-white rounded-2xl border border-gray-200/90 hover:border-blue-500 hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300 flex flex-col justify-between overflow-hidden relative">
                         <!-- Floating Favorite Button -->
                         <button
                             type="button"
@@ -278,26 +363,26 @@
                             <i class="bi {{ in_array($product->id, $userFavoriteIds, true) ? 'bi-heart-fill text-rose-600' : 'bi-heart' }} text-xs"></i>
                         </button>
 
-                        <div class="p-4 sm:p-5 flex flex-col flex-grow">
-                            <!-- Top Row: Brand & Stock Status -->
+                        <div class="p-3.5 sm:p-4 flex flex-col flex-grow">
+                            <!-- Top Brand & Stock Status Row -->
                             <div class="flex items-center justify-between gap-2 mb-2.5 pr-8">
-                                <span class="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider group-hover:text-blue-600 transition truncate">
-                                    {{ $product->brand?->name ?? 'Genuine Part' }}
+                                <span class="text-[11px] font-extrabold text-gray-400 uppercase tracking-wider group-hover:text-blue-600 transition truncate">
+                                    {{ $product->brand?->name ?? 'Hardware' }}
                                 </span>
 
                                 <div class="shrink-0">
                                     @if($product->stock_quantity <= 0)
-                                        <span class="inline-flex items-center gap-1.5 text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200/80 px-2 py-0.5 rounded-full">
+                                        <span class="inline-flex items-center gap-1 text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200/80 px-2 py-0.5 rounded-full">
                                             <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
                                             Out of Stock
                                         </span>
                                     @elseif($product->stock_quantity <= $product->low_stock_threshold)
-                                        <span class="inline-flex items-center gap-1.5 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-full">
+                                        <span class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-full">
                                             <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
                                             Only {{ $product->stock_quantity }} Left
                                         </span>
                                     @else
-                                        <span class="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full">
+                                        <span class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full">
                                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                                             In Stock
                                         </span>
@@ -305,12 +390,11 @@
                                 </div>
                             </div>
 
-                            <!-- Product Image Container -->
+                            <!-- Product Image Stage (Compact Height) -->
                             <a href="{{ route('product.show', $product->slug) }}" class="block relative my-1">
-                                <div class="product-card-img-stage w-full bg-slate-50/90 rounded-xl border border-slate-100 p-3 relative group-hover:bg-blue-50/20 transition-colors" style="height: 175px; max-height: 175px;">
+                                <div class="product-card-img-stage w-full bg-gradient-to-b from-gray-50/80 to-slate-100/50 rounded-xl border border-gray-100 p-2 relative group-hover:bg-blue-50/20 transition-colors" style="height: 135px; max-height: 135px;">
                                     @if($product->sale_price && $product->price > $product->sale_price)
-                                        <span class="absolute top-2.5 left-2.5 z-10 inline-flex items-center gap-1 bg-gradient-to-r from-rose-600 to-red-500 text-white text-[10px] font-black px-2.5 py-0.5 rounded-md shadow-xs uppercase tracking-wider">
-                                            <i class="bi bi-tag-fill text-[9px]"></i>
+                                        <span class="absolute top-2 left-2 z-10 inline-flex items-center gap-1 bg-rose-600 text-white text-[9px] font-black px-2 py-0.5 rounded shadow-xs uppercase tracking-wider">
                                             SAVE ${{ number_format($product->price - $product->sale_price, 0) }}
                                         </span>
                                     @endif
@@ -319,7 +403,7 @@
                                         <img 
                                             src="{{ $product->primary_image_url }}" 
                                             alt="{{ $product->name }}" 
-                                            class="p-1 group-hover:scale-105 transition-transform duration-300 ease-out"
+                                            class="p-1 group-hover:scale-108 transition-transform duration-300 ease-out"
                                             style="max-height: 100%; max-width: 100%; width: auto; height: auto; object-fit: contain;"
                                             loading="lazy"
                                             onerror="this.onerror=null; this.src='{{ asset('assets/images/placeholder-product.svg') }}';"
@@ -328,7 +412,7 @@
                                         <img 
                                             src="{{ asset('assets/images/placeholder-product.svg') }}" 
                                             alt="{{ $product->name }}" 
-                                            class="p-1 group-hover:scale-105 transition-transform duration-300 ease-out opacity-80"
+                                            class="p-1 group-hover:scale-108 transition-transform duration-300 ease-out opacity-80"
                                             style="max-height: 100%; max-width: 100%; width: auto; height: auto; object-fit: contain;"
                                             loading="lazy"
                                         >
@@ -337,67 +421,48 @@
                             </a>
 
                             <!-- Category & SKU Meta -->
-                            <div class="flex items-center justify-between text-[11px] font-medium mt-3 mb-1">
-                                <span class="text-blue-600 font-semibold truncate">{{ $product->category?->name ?? 'Components' }}</span>
-                                <span class="font-mono text-slate-400 text-[10px] shrink-0">SKU: {{ $product->sku }}</span>
+                            <div class="flex items-center justify-between text-[10px] text-gray-400 font-medium mt-2 mb-1">
+                                <span class="truncate">{{ $product->category?->name ?? 'Components' }}</span>
+                                <span class="font-mono text-gray-400 text-[9px] shrink-0">SKU: {{ $product->sku }}</span>
                             </div>
 
                             <!-- Clamped Title for Uniform Row Alignment -->
-                            <h3 class="font-bold text-slate-900 text-sm leading-snug group-hover:text-blue-600 transition h-10 line-clamp-2" title="{{ $product->name }}">
+                            <h3 class="font-bold text-gray-900 text-xs sm:text-sm leading-snug group-hover:text-blue-600 transition h-9 line-clamp-2" title="{{ $product->name }}">
                                 <a href="{{ route('product.show', $product->slug) }}">
                                     {{ $product->name }}
                                 </a>
                             </h3>
-
-                            <!-- Specifications Micro-Tags -->
-                            @if(!empty($product->specifications))
-                                <div class="mt-2.5 flex flex-wrap gap-1.5 min-h-[26px]">
-                                    @php $count = 0; @endphp
-                                    @foreach($product->specifications as $k => $v)
-                                        @if($count < 2)
-                                            <span class="inline-flex items-center gap-1 text-[10px] font-medium bg-slate-100 text-slate-700 border border-slate-200/80 px-2 py-0.5 rounded-md">
-                                                <span class="text-slate-400 font-normal">{{ $k }}:</span> 
-                                                <strong class="text-slate-800 font-semibold truncate max-w-[130px]">{{ $v }}</strong>
-                                            </span>
-                                            @php $count++; @endphp
-                                        @endif
-                                    @endforeach
-                                </div>
-                            @else
-                                <div class="min-h-[26px]"></div>
-                            @endif
                         </div>
 
-                        <!-- Price & Action Footer -->
-                        <div class="p-4 sm:p-5 pt-0 mt-auto border-t border-slate-100 bg-slate-50/50">
-                            <div class="flex items-baseline justify-between gap-2 pt-3 mb-3">
-                                <div class="flex items-baseline gap-2">
+                        <!-- Bottom Price & Action Footer -->
+                        <div class="p-3 sm:p-3.5 pt-0 mt-auto border-t border-gray-100 bg-gray-50/50">
+                            <div class="flex items-baseline justify-between gap-1.5 pt-2 mb-2">
+                                <div class="flex items-baseline gap-1.5">
                                     @if($product->sale_price)
-                                        <span class="text-xl font-black text-slate-900 tracking-tight">
+                                        <span class="text-lg font-black text-gray-900 tracking-tight">
                                             ${{ number_format($product->sale_price, 2) }}
                                         </span>
-                                        <span class="text-xs text-slate-400 line-through font-medium">
+                                        <span class="text-[11px] text-gray-400 line-through">
                                             ${{ number_format($product->price, 2) }}
                                         </span>
                                     @else
-                                        <span class="text-xl font-black text-slate-900 tracking-tight">
+                                        <span class="text-lg font-black text-gray-900 tracking-tight">
                                             ${{ number_format($product->price, 2) }}
                                         </span>
                                     @endif
                                 </div>
 
-                                @if($product->sale_price && $product->price > $product->sale_price)
+                                @if($product->sale_price && $product->price > 0)
                                     @php $pct = round((($product->price - $product->sale_price) / $product->price) * 100); @endphp
-                                    <span class="text-[10px] font-black text-rose-700 bg-rose-50 border border-rose-200/80 px-1.5 py-0.5 rounded-md uppercase tracking-wide">
-                                        -{{ $pct }}% OFF
+                                    <span class="text-[9px] font-extrabold text-rose-700 bg-rose-50 border border-rose-200/80 px-1.5 py-0.5 rounded">
+                                        -{{ $pct }}%
                                     </span>
                                 @endif
                             </div>
 
-                            <div class="grid grid-cols-5 gap-2">
-                                <a href="{{ route('product.show', $product->slug) }}" class="col-span-2 py-2.5 px-3 text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 hover:text-slate-900 rounded-xl transition flex items-center justify-center gap-1 border border-slate-200 shadow-2xs active:scale-95" title="View Full Specs">
-                                    <i class="bi bi-eye text-slate-500 text-xs"></i>
-                                    <span>Details</span>
+                            <div class="grid grid-cols-5 gap-1.5">
+                                <a href="{{ route('product.show', $product->slug) }}" class="col-span-2 py-1.5 px-2 text-xs font-bold text-gray-700 bg-white hover:bg-gray-100 hover:text-gray-900 rounded-lg transition flex items-center justify-center border border-gray-300 shadow-2xs" title="View Full Specs">
+                                    Details
                                 </a>
                                 <form action="{{ route('cart.add', $product->id) }}" method="POST" class="col-span-3">
                                     @csrf
@@ -405,11 +470,11 @@
                                     <button
                                         type="submit"
                                         @if($product->stock_quantity <= 0) disabled @endif
-                                        class="w-full py-2.5 px-3 text-xs font-bold text-white rounded-xl transition flex items-center justify-center gap-1.5 shadow-sm active:scale-95 {{ $product->stock_quantity > 0 ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/20' : 'bg-slate-300 cursor-not-allowed text-slate-500' }}"
+                                        class="w-full py-1.5 px-2 text-xs font-bold text-white rounded-lg transition flex items-center justify-center gap-1 shadow-xs active:scale-[0.98] {{ $product->stock_quantity > 0 ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/20 cursor-pointer' : 'bg-gray-300 cursor-not-allowed text-gray-500' }}"
                                     >
                                         @if($product->stock_quantity > 0)
-                                            <i class="bi bi-cart-plus-fill text-xs"></i>
-                                            <span>+ Add</span>
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+                                            <span>Add</span>
                                         @else
                                             <span>Sold Out</span>
                                         @endif

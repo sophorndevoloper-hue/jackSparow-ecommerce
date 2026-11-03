@@ -2,6 +2,7 @@
 
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\CustomerGroup;
 use App\Models\FrontendUser;
 use App\Models\Order;
 use App\Models\PaymentMethod;
@@ -90,6 +91,40 @@ it('displays all backend featured products ordered with newest first at the top'
     $posFeaturedSection = strpos($content, 'Featured Components');
     $posDealsSection = strpos($content, 'Flash Deals');
     expect($posFeaturedSection)->toBeLessThan($posDealsSection);
+
+    // Verify Featured Components renders as carousel with scroll track and progress
+    expect($content)->toContain('x-ref="featuredTrack"');
+    expect($content)->toContain('featured-card-5col');
+});
+
+it('renders featured components as a carousel without brand buttons strip', function () {
+    $category = Category::factory()->create();
+    $brand = Brand::factory()->create(['name' => 'Featured Brand Star', 'logo' => 'https://example.com/star.png']);
+    Product::factory()->count(4)->create([
+        'category_id' => $category->id,
+        'brand_id' => $brand->id,
+        'is_featured' => true,
+        'is_active' => true,
+    ]);
+
+    $response = $this->get('/');
+    $response->assertStatus(200);
+
+    $content = $response->getContent();
+    expect($content)->toContain('id="featured-products"');
+    expect($content)->toContain('x-ref="featuredTrack"');
+
+    // Extract the featured section HTML
+    $featuredSectionStart = strpos($content, '<section id="featured-products"');
+    $featuredSectionEnd = strpos($content, '</section>', $featuredSectionStart);
+    $featuredHtml = substr($content, $featuredSectionStart, $featuredSectionEnd - $featuredSectionStart);
+
+    // Assert that quick brand strip is NOT inside the featured section
+    expect($featuredHtml)->not->toContain('Top Brands:');
+
+    // Assert that badges like FEATURED or PREMIUM are not shown on cards
+    expect($featuredHtml)->not->toContain('FEATURED');
+    expect($featuredHtml)->not->toContain('PREMIUM');
 });
 
 it('paginates featured products when they exceed 3 rows (12 items)', function () {
@@ -138,6 +173,17 @@ it('renders the hardware shop catalog with filtering', function () {
 
     $response->assertStatus(200);
     $response->assertSee('NVIDIA GeForce RTX 4080 Super');
+
+    // Verify in-filter search inputs for category and brand in sidebar
+    $response->assertSee('placeholder="Search categories..."', false);
+    $response->assertSee('placeholder="Search brands..."', false);
+    $response->assertDontSee('Search Hardware');
+
+    // Verify Product Collection filter is removed from sidebar
+    $response->assertDontSee('Product Collection');
+
+    // Verify 4-card grid layout on desktop
+    $response->assertSee('xl:grid-cols-4', false);
 });
 
 it('renders the computer part detail page with specifications', function () {
@@ -174,6 +220,8 @@ it('can add a computer component to cart and view cart', function () {
     $cartResponse = $this->get(route('cart.index'));
     $cartResponse->assertStatus(200);
     $cartResponse->assertSee($product->name);
+    $cartResponse->assertSee('window.cartStepper.change('.$product->id.', 1)', false);
+    $cartResponse->assertDontSee('data-cart-action');
 });
 
 it('redirects unauthenticated guest visiting checkout to login page with intended url', function () {
@@ -499,6 +547,72 @@ it('fetches and displays active payment methods from backend on checkout', funct
     $response->assertDontSee('Disabled Gateway');
 });
 
+it('does not display B2B corporate credit terms on storefront checkout for B2C customer flow', function () {
+    $group = CustomerGroup::create([
+        'name' => 'VIP Corporate',
+        'slug' => 'vip-corporate',
+        'code' => 'VIP_CORP',
+        'credit_limit' => 25000.00,
+        'is_active' => true,
+    ]);
+
+    $customer = FrontendUser::factory()->create([
+        'customer_group_id' => $group->id,
+        'credit_limit' => 25000.00,
+    ]);
+
+    $product = Product::factory()->create(['price' => 150, 'stock_quantity' => 10]);
+
+    $cart = [
+        $product->id => [
+            'id' => $product->id,
+            'name' => $product->name,
+            'price' => 150,
+            'quantity' => 1,
+            'image' => null,
+        ],
+    ];
+
+    $response = $this->actingAs($customer, 'frontend')
+        ->withSession(['cart' => $cart])
+        ->get(route('checkout.index'));
+
+    $response->assertStatus(200);
+    $response->assertDontSee('B2B Corporate Credit Terms');
+    $response->assertDontSee('Available Credit');
+    $response->assertDontSee('Net 30 Days');
+});
+
+it('renders active dynamic payment methods and free shipping indicator on checkout', function () {
+    $customer = FrontendUser::factory()->create();
+    $product = Product::factory()->create(['price' => 180.00, 'stock_quantity' => 10]);
+
+    PaymentMethod::create([
+        'name' => 'Cash on Delivery (COD)',
+        'code' => 'cash_on_delivery',
+        'is_active' => true,
+        'sort_order' => 1,
+    ]);
+
+    $cart = [
+        $product->id => [
+            'id' => $product->id,
+            'name' => $product->name,
+            'price' => 180.00,
+            'quantity' => 1,
+            'image' => null,
+        ],
+    ];
+
+    $response = $this->actingAs($customer, 'frontend')
+        ->withSession(['cart' => $cart])
+        ->get(route('checkout.index'));
+
+    $response->assertStatus(200);
+    $response->assertSee('Cash on Delivery (COD)');
+    $response->assertSee('Free Express Shipping Unlocked');
+});
+
 it('can add a product to cart via AJAX without page reload and returns json response', function () {
     $category = Category::factory()->create();
     $product = Product::factory()->create([
@@ -716,4 +830,66 @@ it('renders authorized brand logos section on the homepage next to flash deals',
     if ($posDealsSection !== false) {
         expect($posBrandSection)->toBeGreaterThan($posDealsSection);
     }
+});
+
+it('renders best seller products as a carousel next to flash deals and clearance', function () {
+    $category = Category::factory()->create();
+    $brand = Brand::factory()->create();
+
+    // Create a flash deal product
+    Product::factory()->create([
+        'category_id' => $category->id,
+        'brand_id' => $brand->id,
+        'name' => 'Flash Deal GPU',
+        'price' => 500.00,
+        'sale_price' => 399.00,
+        'is_active' => true,
+    ]);
+
+    // Create best seller product curated in StorefrontProduct
+    $bestProduct = Product::factory()->create([
+        'category_id' => $category->id,
+        'brand_id' => $brand->id,
+        'name' => 'Top Seller Ryzen CPU',
+        'price' => 350.00,
+        'is_active' => true,
+    ]);
+
+    StorefrontProduct::create([
+        'product_id' => $bestProduct->id,
+        'section' => 'bestseller',
+        'is_active' => true,
+        'sort_order' => 1,
+    ]);
+
+    $response = $this->get('/');
+    $response->assertStatus(200);
+
+    $content = $response->getContent();
+
+    // Best Sellers section rendered with carousel attributes
+    expect($content)->toContain('id="bestseller-products"');
+    expect($content)->toContain('Best Sellers');
+    expect($content)->toContain('Top Seller Ryzen CPU');
+    expect($content)->toContain('x-ref="bestsellerTrack"');
+    expect($content)->toContain('bestseller-card-5col');
+
+    // Section ordering: Flash Deals appears before Best Sellers, which appears before Authorized Brands
+    $posDeals = strpos($content, 'Flash Deals');
+    $posBestSellers = strpos($content, 'id="bestseller-products"');
+    $posBrands = strpos($content, 'id="partner-brands"');
+
+    expect($posDeals)->toBeLessThan($posBestSellers);
+    if ($posBrands !== false) {
+        expect($posBestSellers)->toBeLessThan($posBrands);
+    }
+
+    // Verify card is compact: no FEATURED or PREMIUM badge, no spec micro-tags
+    $bsSectionStart = strpos($content, '<section id="bestseller-products"');
+    $bsSectionEnd = strpos($content, '</section>', $bsSectionStart);
+    $bsHtml = substr($content, $bsSectionStart, $bsSectionEnd - $bsSectionStart);
+
+    expect($bsHtml)->not->toContain('FEATURED');
+    expect($bsHtml)->not->toContain('PREMIUM');
+    expect($bsHtml)->not->toContain('Specifications:');
 });

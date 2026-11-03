@@ -65,7 +65,6 @@
                         @csrf
                         <button
                             type="button"
-                            data-cart-action="clear"
                             onclick="window.cartStepper ? window.cartStepper.clearAll() : null"
                             class="text-xs font-semibold text-rose-600 hover:text-rose-700 transition flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-rose-50 cursor-pointer"
                         >
@@ -119,8 +118,6 @@
                                         <button
                                             type="button"
                                             id="btn-minus-{{ $id }}"
-                                            data-cart-action="minus"
-                                            data-cart-id="{{ $id }}"
                                             onclick="window.cartStepper ? window.cartStepper.change({{ $id }}, -1) : null"
                                             {{ $item['quantity'] <= 1 ? 'disabled' : '' }}
                                             class="w-8 h-8 rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-100 hover:text-gray-900 active:scale-95 flex items-center justify-center transition disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs cursor-pointer"
@@ -145,8 +142,6 @@
                                         <button
                                             type="button"
                                             id="btn-plus-{{ $id }}"
-                                            data-cart-action="plus"
-                                            data-cart-id="{{ $id }}"
                                             onclick="window.cartStepper ? window.cartStepper.change({{ $id }}, 1) : null"
                                             {{ $item['quantity'] >= $item['stock_quantity'] ? 'disabled' : '' }}
                                             class="w-8 h-8 rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-100 hover:text-gray-900 active:scale-95 flex items-center justify-center transition disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs cursor-pointer"
@@ -175,8 +170,6 @@
                                 <!-- Remove Item Button -->
                                 <button
                                     type="button"
-                                    data-cart-action="remove"
-                                    data-cart-id="{{ $id }}"
                                     onclick="window.cartStepper ? window.cartStepper.removeItem({{ $id }}) : null"
                                     class="text-gray-400 hover:text-rose-600 p-1.5 rounded-xl hover:bg-rose-50 transition cursor-pointer"
                                     title="Remove item"
@@ -289,6 +282,9 @@
         },
 
         change(productId, delta) {
+            if (this.pendingUpdates && this.pendingUpdates[productId]) {
+                return;
+            }
             const input = document.getElementById('cart-qty-' + productId);
             if (!input) return;
             let current = parseInt(input.value, 10) || 1;
@@ -327,13 +323,16 @@
         },
 
         updateServer(productId, quantity) {
+            this.pendingUpdates = this.pendingUpdates || {};
+            this.pendingUpdates[productId] = true;
+
             const spinner = document.getElementById('loading-spinner-' + productId);
             const btnMinus = document.getElementById('btn-minus-' + productId);
             const btnPlus = document.getElementById('btn-plus-' + productId);
             const maxStock = this.stockMap[productId] || 999;
 
-            if (btnMinus) btnMinus.disabled = (quantity <= 1);
-            if (btnPlus) btnPlus.disabled = (quantity >= maxStock);
+            if (btnMinus) btnMinus.disabled = true;
+            if (btnPlus) btnPlus.disabled = true;
             if (spinner) spinner.classList.remove('hidden');
 
             fetch(this.updateUrlTemplate + '/' + productId, {
@@ -347,6 +346,7 @@
                 body: JSON.stringify({ quantity })
             })
             .then(async (response) => {
+                this.pendingUpdates[productId] = false;
                 if (spinner) spinner.classList.add('hidden');
                 const data = await response.json().catch(() => ({}));
 
@@ -356,6 +356,9 @@
                         lineElem.textContent = data.formatted_item_total;
                     }
                     window.cartStepper.applyTotals(data);
+                    const finalQty = data.current_quantity || quantity;
+                    if (btnMinus) btnMinus.disabled = (finalQty <= 1);
+                    if (btnPlus) btnPlus.disabled = (finalQty >= maxStock);
                     if (typeof window.toast === 'function') {
                         window.toast(data.message || 'Quantity updated.', 'success', 'Cart Updated');
                     }
@@ -367,10 +370,18 @@
                     if (data.current_quantity) {
                         const input = document.getElementById('cart-qty-' + productId);
                         if (input) input.value = data.current_quantity;
+                        if (btnMinus) btnMinus.disabled = (data.current_quantity <= 1);
+                        if (btnPlus) btnPlus.disabled = (data.current_quantity >= maxStock);
+                    } else {
+                        if (btnMinus) btnMinus.disabled = (quantity <= 1);
+                        if (btnPlus) btnPlus.disabled = (quantity >= maxStock);
                     }
                 }
             })
             .catch(() => {
+                this.pendingUpdates[productId] = false;
+                if (btnMinus) btnMinus.disabled = (quantity <= 1);
+                if (btnPlus) btnPlus.disabled = (quantity >= maxStock);
                 if (spinner) spinner.classList.add('hidden');
                 if (typeof window.toast === 'function') {
                     window.toast('Network error updating cart.', 'error', 'Error');
@@ -510,17 +521,5 @@
 
     // Global alias for compatibility
     var cartStepper = window.cartStepper;
-
-    // Delegated click handler to guarantee clicks work across the entire cart
-    document.addEventListener('click', function(e) {
-        const btn = e.target.closest('[data-cart-action]');
-        if (!btn) return;
-        const action = btn.getAttribute('data-cart-action');
-        const id = btn.getAttribute('data-cart-id');
-        if (action === 'minus' && id) window.cartStepper.change(id, -1);
-        if (action === 'plus' && id) window.cartStepper.change(id, 1);
-        if (action === 'remove' && id) window.cartStepper.removeItem(id);
-        if (action === 'clear') window.cartStepper.clearAll();
-    });
 </script>
 @endsection

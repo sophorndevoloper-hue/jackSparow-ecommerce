@@ -80,6 +80,27 @@ class HomeController extends Controller
             $latestDeals = $latestDeals->concat($additionalDeals);
         }
 
+        // 3. Best Seller products curated in Website Setup -> Website Products or ordered by sales
+        $bestSellers = StorefrontProduct::getForSection('bestseller', 12);
+        if ($bestSellers->count() < 12) {
+            $existingIds = $bestSellers->pluck('id')->filter()->toArray();
+            $additionalBestSellers = Product::query()
+                ->active()
+                ->whereNotIn('id', $existingIds)
+                ->whereHas('orderItems')
+                ->whereDoesntHave('storefrontProducts', function ($query) {
+                    $query->where('section', 'bestseller')->where('is_active', false);
+                })
+                ->with(['brand', 'category', 'images', 'primaryImage'])
+                ->withSum('orderItems', 'quantity')
+                ->orderByDesc('order_items_sum_quantity')
+                ->latest('id')
+                ->take(12 - $bestSellers->count())
+                ->get();
+
+            $bestSellers = $bestSellers->concat($additionalBestSellers);
+        }
+
         // 4. Authorized Component Brands
         $topBrands = Brand::query()
             ->active()
@@ -96,6 +117,7 @@ class HomeController extends Controller
             'categories',
             'featuredProducts',
             'latestDeals',
+            'bestSellers',
             'topBrands',
             'userFavoriteIds'
         ));

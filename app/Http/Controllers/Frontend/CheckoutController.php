@@ -51,34 +51,14 @@ class CheckoutController extends Controller
         $user = auth('frontend')->user();
         $customerGroup = $user?->customerGroup;
 
-        $eligiblePaymentTerms = collect();
-        $availableCredit = 0.00;
-        $creditLimit = 0.00;
-        $outstandingCredit = 0.00;
-
-        if ($user && $customerGroup) {
-            $eligiblePaymentTerms = CustomerGroupPaymentTerm::query()
-                ->where('is_active', true)
-                ->where(function ($q) use ($customerGroup) {
-                    $q->where('customer_group_id', $customerGroup->id)
-                        ->orWhereNull('customer_group_id');
-                })
-                ->orderByRaw('customer_group_id IS NOT NULL DESC')
-                ->orderBy('days')
-                ->get();
-
-            $creditLimit = (float) ($user->credit_limit > 0 ? $user->credit_limit : ($customerGroup->credit_limit ?? 0));
-            $outstandingCredit = (float) Order::where('frontend_user_id', $user->id)
-                ->whereIn('payment_status', ['pending', 'partially_paid'])
-                ->sum('total_amount');
-
-            $availableCredit = max(0.00, round($creditLimit - $outstandingCredit, 2));
-        }
-
         $paymentMethods = PaymentMethod::query()
             ->active()
             ->ordered()
             ->get();
+
+        $freeShippingThreshold = 150.00;
+        $amountToFreeShipping = max(0.00, round($freeShippingThreshold - $subtotal, 2));
+        $shippingProgress = min(100, (int) round(($subtotal / $freeShippingThreshold) * 100));
 
         return view('frontend.checkout', compact(
             'cart',
@@ -89,10 +69,9 @@ class CheckoutController extends Controller
             'user',
             'customerGroup',
             'paymentMethods',
-            'eligiblePaymentTerms',
-            'availableCredit',
-            'creditLimit',
-            'outstandingCredit'
+            'freeShippingThreshold',
+            'amountToFreeShipping',
+            'shippingProgress'
         ));
     }
 

@@ -88,8 +88,20 @@ class ShopController extends Controller
 
         $products = $query->paginate(12)->withQueryString();
 
-        $categories = Category::query()->active()->withCount('products')->orderBy('sort_order')->get();
-        $brands = Brand::query()->active()->withCount('products')->orderBy('name')->get();
+        $categories = Category::query()
+            ->active()
+            ->withCount('products')
+            ->orderByDesc('products_count')
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+
+        $brands = Brand::query()
+            ->active()
+            ->withCount('products')
+            ->orderByDesc('products_count')
+            ->orderBy('name')
+            ->get();
         $collections = ProductCollection::query()->active()->withCount('products')->orderBy('sort_order')->orderBy('name')->get();
 
         return view('frontend.shop', compact('products', 'categories', 'brands', 'collections', 'sort'));
